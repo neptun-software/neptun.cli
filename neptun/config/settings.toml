@@ -1,0 +1,11 @@
+[default]
+name="neptun"
+descrption="A CLI-Interface build with python which is compatible with tethe Neptun-web-application and alloows a seemsless automatic generation of deployment scripts based on the provided folder structure."
+
+[default.caching]
+caching_enabled=true
+cache_name="cache/neptun_cache"
+cache_expiration=600
+
+[auth]
+neptun_token = ""
