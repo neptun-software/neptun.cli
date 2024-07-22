@@ -6,10 +6,14 @@ __version__ = "0.1.0"
     DIR_ERROR,
     FILE_ERROR,
     JSON_ERROR,
+    UPDATE_CONFIG_ERROR,
+    CONFIG_KEY_NOT_FOUND_ERROR,
     ID_ERROR,
-) = range(5)
+) = range(7)
 
 ERRORS = {
     DIR_ERROR: "config directory error",
     FILE_ERROR: "config file error",
+    UPDATE_CONFIG_ERROR: "update config error",
+    CONFIG_KEY_NOT_FOUND_ERROR: "config key not found error"
 }

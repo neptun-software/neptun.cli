@@ -32,6 +32,16 @@ test = ["anyio[trio]", "coverage[toml] (>=7)", "exceptiongroup (>=1.2.0)", "hypo
 trio = ["trio (>=0.23)"]
 
 [[package]]
+name = "cache"
+version = "1.0.3"
+description = "caching for humans"
+optional = false
+python-versions = "*"
+files = [
+    {file = "cache-1.0.3.tar.gz", hash = "sha256:ac063f2490c0794d5cf482bfff10b6339c441a6658f8f00fe653bd65b3ce85fb"},
+]
+
+[[package]]
 name = "certifi"
 version = "2024.7.4"
 description = "Python package for providing Mozilla's CA Bundle."
@@ -68,25 +78,19 @@ files = [
 ]
 
 [[package]]
-name = "dynaconf"
-version = "3.2.5"
-description = "The dynamic configurator for your Python Project"
+name = "configparser"
+version = "7.0.0"
+description = "Updated configparser from stdlib for earlier Pythons."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "dynaconf-3.2.5-py2.py3-none-any.whl", hash = "sha256:12202fc26546851c05d4194c80bee00197e7c2febcb026e502b0863be9cbbdd8"},
-    {file = "dynaconf-3.2.5.tar.gz", hash = "sha256:42c8d936b32332c4b84e4d4df6dd1626b6ef59c5a94eb60c10cd3c59d6b882f2"},
+    {file = "configparser-7.0.0-py3-none-any.whl", hash = "sha256:f46d52a12811c637104c6bb8eb33693be0038ab6bf01d69aae009c39ec8c2017"},
+    {file = "configparser-7.0.0.tar.gz", hash = "sha256:af3c618a67aaaedc4d689fd7317d238f566b9aa03cae50102e92d7f0dfe78ba0"},
 ]
 
 [package.extras]
-all = ["configobj", "hvac", "redis", "ruamel.yaml"]
-configobj = ["configobj"]
-ini = ["configobj"]
-redis = ["redis"]
-test = ["configobj", "django", "flask (>=0.12)", "hvac (>=1.1.0)", "pytest", "pytest-cov", "pytest-mock", "pytest-xdist", "python-dotenv", "radon", "redis", "toml"]
-toml = ["toml"]
-vault = ["hvac"]
-yaml = ["ruamel.yaml"]
+docs = ["furo", "jaraco.packaging (>=9.3)", "jaraco.tidelift (>=1.4)", "rst.linker (>=1.9)", "sphinx (>=3.5)", "sphinx-lint"]
+testing = ["pytest (>=6,!=8.1.1)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-enabler (>=2.2)", "pytest-mypy", "pytest-ruff (>=0.2.1)", "types-backports"]
 
 [[package]]
 name = "h11"
@@ -455,4 +459,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12"
-content-hash = "987698697a057755f18f7ff533544e1891f75a0a91dcaedd57b2c0e872cea1cb"
+content-hash = "ca8d8e7079294073f8e4136e0dfa2a9cfce881e60be8414744b2e1e0fd0dca5d"

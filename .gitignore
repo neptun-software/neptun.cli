@@ -21,3 +21,8 @@
 go.work
 
 dist
+
+.secrets.*
+.idea
+.vscode
+README.pdf
