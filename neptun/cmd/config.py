@@ -47,7 +47,7 @@ config_app.command(name="fallback", help="Fallback to the default settings if yo
 
 
 def configure_caching(val: Annotated[str, typer.Option("--value")]):
-    if val != "True" and val != "False":
+    if val not in ["True", "False", "true", "false"]:
         typer.secho(
             f'The value must be [True/False]!"',
             fg=typer.colors.RED,
@@ -65,5 +65,19 @@ def configure_caching(val: Annotated[str, typer.Option("--value")]):
         typer.secho(f"Successfully set caching to {val}", fg=typer.colors.GREEN)
 
 
-config_app.command(name="caching", help="Enable/Disable request-caching")(configure_caching)
+config_app.command(name="caching", help="Enable/Disable request-caching.")(configure_caching)
 
+
+def configure_auth_token(val: Annotated[str, typer.Option("--value")]):
+    update_config_error = config_manager.update_config_dynamically(query=f"auth.neptun_auth_token={val}")
+
+    if update_config_error:
+        typer.secho(
+            f'Failed to update configuration: "{ERRORS[update_config_error]}"',
+            fg=typer.colors.RED,
+        )
+    else:
+        typer.secho(f"Successfully set auth-key to: {val}", fg=typer.colors.GREEN)
+
+
+config_app.command(name="auth-token", help="Update your neptun-auth-token.")(configure_auth_token)
