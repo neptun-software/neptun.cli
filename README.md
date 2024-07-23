@@ -25,3 +25,4 @@ Options:
 * https://realpython.com/python-typer-cli/ -> project-structure & explanation
 * https://www.codecentric.de/wissens-hub/blog/lets-build-a-modern-cmd-tool-with-python-using-typer-and-rich -> rich & taper
 * https://www.freecodecamp.org/news/how-to-build-and-publish-python-packages-with-poetry/ -> poetry docs
+* https://github.com/tmbo/questionary/tree/master/examples-> selections, inputs

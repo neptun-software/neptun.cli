@@ -1,24 +1,39 @@
 from rich.console import Console
 import typer
 from typing_extensions import Annotated
-from neptun import ERRORS
 from neptun.utils.managers import AuthenticationManager
 from rich.prompt import Prompt
-from rich.text import Text
-from rich.panel import Panel
+import re
+import questionary
 from secrets import compare_digest
 
 console = Console()
 authentication_manager = AuthenticationManager()
+
+regex = re.compile(r'([A-Za-z0-9]+[.-_])*[A-Za-z0-9]+@[A-Za-z0-9-]+(\.[A-Z|a-z]{2,})+')
+
+
+def is_valid(email):
+    if re.fullmatch(regex, email):
+        return True
+    else:
+        return False
+
 
 auth_app = typer.Typer(name="Authentication Manager",
                        help="This tool is allows you to directly connect the neptun-web-client.")
 
 
 def login_prompt():
-    email = Prompt.ask("Enter your email")
-    password = Prompt.ask("Enter your password", password=True)
-    print(f"Email: {email}")
+
+    email = questionary.text("Enter your email:").ask()
+
+    if is_valid(email):
+        print(f"Email: {email}")
+    else:
+        raise typer.Abort
+
+    password = questionary.password("Enter your password:").ask()
     print(f"Password: {'*' * len(password)}")
 
 
@@ -29,6 +44,7 @@ def login(
     email: Annotated[str, typer.Option("--email", help="Email address for login")],
     password: Annotated[str, typer.Option("--password", help="Password for login", prompt=True, hide_input=True)]
 ):
+
     print(f"Email: {email}")
     print(f"Password: {'*' * len(password)}")
 
