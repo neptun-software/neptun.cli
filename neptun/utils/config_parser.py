@@ -87,7 +87,7 @@ class ConfigManager:
 
     @ensure_latest_config
     def update_config(self, section: str, key: str, value: str) -> ConfigResponse:
-        if section in self.config.sections():
+        if section in self.config.sections() and key in self.config[section].keys():
             self.config[section][key] = value
 
             with open(self.config_file_path, 'w') as configfile:

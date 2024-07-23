@@ -12,7 +12,7 @@ config_app = typer.Typer(name="Configuration Manager", help="This tool allows yo
                                                           "configurations, remove existing ones.")
 
 
-def update_config_dynamically(query: Annotated[str, typer.Option("--query", "-q")]):
+def update_config_dynamically(query: Annotated[str, typer.Option("--query")]):
     update_config_error = config_manager.update_config_dynamically(query=query)
     if update_config_error:
         typer.secho(
@@ -44,3 +44,26 @@ def update_with_fallback():
 
 
 config_app.command(name="fallback", help="Fallback to the default settings if you have messed up the configuration file.")(update_with_fallback)
+
+
+def configure_caching(val: Annotated[str, typer.Option("--value")]):
+    if val != "True" and val != "False":
+        typer.secho(
+            f'The value must be [True/False]!"',
+            fg=typer.colors.RED,
+        )
+        raise typer.Abort()
+
+    update_config_error = config_manager.update_config_dynamically(query=f"caching.caching_enabled={val}")
+
+    if update_config_error:
+        typer.secho(
+            f'Failed to update configuration: "{ERRORS[update_config_error]}"',
+            fg=typer.colors.RED,
+        )
+    else:
+        typer.secho(f"Successfully set caching to {val}", fg=typer.colors.GREEN)
+
+
+config_app.command(name="caching", help="Enable/Disable request-caching")(configure_caching)
+
