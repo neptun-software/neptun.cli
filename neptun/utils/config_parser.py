@@ -17,9 +17,8 @@ DEFAULT_CONFIG = {
         "cache_expiration": "600"
     },
     "auth": {
-        "neptun_auth_token": "pimmel"
+        "neptun_auth_token": ""
     },
-    "fallback": {}
 }
 
 
@@ -137,6 +136,13 @@ class ConfigManager:
         section, rest = query.split('.', 1)
         key, value = rest.split('=', 1)
         return self.update_config(section, key, value)
+
+    def update_with_fallback(self) -> ConfigResponse:
+        try:
+            self._write_default_config()
+            return SUCCESS
+        except FileNotFoundError:
+            return DIR_ERROR
 
     @ensure_latest_config
     def get_config_as_dict(self) -> dict:

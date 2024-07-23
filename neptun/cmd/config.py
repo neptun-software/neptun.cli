@@ -27,6 +27,20 @@ def update_config_dynamically(query: Annotated[str, typer.Option("--query", "-q"
 config_app.command(name="dynamic", help="Edit your app-settings dynamically")(update_config_dynamically)
 
 
+def update_with_fallback():
+    fallback = typer.confirm("Are you sure you want to fallback to the default configuration?")
+    if not fallback:
+        raise typer.Abort()
+
+    update_config_error = config_manager.update_with_fallback()
+    if update_config_error:
+        typer.secho(
+            f'Failed to update configuration: "{ERRORS[update_config_error]}"',
+            fg=typer.colors.RED,
+        )
+        raise typer.Exit(1)
+    else:
+        typer.secho(f"Successfully updated the configuration with the fallback.", fg=typer.colors.GREEN)
 
 
-
+config_app.command(name="fallback", help="Fallback to the default settings if you have messed up the configuration file.")(update_with_fallback)
