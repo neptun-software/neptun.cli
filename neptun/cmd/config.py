@@ -2,7 +2,7 @@ from rich.console import Console
 import typer
 from typing_extensions import Annotated
 from neptun import ERRORS
-from neptun.utils.config_parser import ConfigManager
+from neptun.utils.managers import ConfigManager
 
 console = Console()
 config_manager = ConfigManager()

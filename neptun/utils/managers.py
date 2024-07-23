@@ -169,6 +169,21 @@ class ConfigManager:
         return SUCCESS
 
 
+@singleton
+class AuthenticationManager:
+    def __init__(self):
+        self.config_manager = ConfigManager()
+
+    def login(self, username, password) -> ConfigResponse:
+        pass
+
+    def register(self, username, password) -> ConfigResponse:
+        pass
+
+    def request_auth_token(self, username, password) -> ConfigResponse:
+        pass
+
+
 # Example usage
 if __name__ == "__main__":
     # Instantiate ConfigManager for INI file

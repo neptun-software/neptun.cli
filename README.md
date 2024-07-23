@@ -18,6 +18,9 @@ Options:
   --help                Show this message and exit.
 ```
 
+* Make sure you create a `neptun/config/config.ini`-file if you are getting a error message(This is due to the non installed cli tool).
+
+
 ## Useful
 * https://realpython.com/python-typer-cli/ -> project-structure & explanation
 * https://www.codecentric.de/wissens-hub/blog/lets-build-a-modern-cmd-tool-with-python-using-typer-and-rich -> rich & taper

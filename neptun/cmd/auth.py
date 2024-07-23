@@ -2,7 +2,7 @@ from rich.console import Console
 import typer
 from typing_extensions import Annotated
 from neptun import ERRORS
-from neptun.utils.authentication_manager import AuthenticationManager
+from neptun.utils.managers import AuthenticationManager
 from rich.prompt import Prompt
 from rich.text import Text
 from rich.panel import Panel
