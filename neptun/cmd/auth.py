@@ -2,13 +2,68 @@ from rich.console import Console
 import typer
 from typing_extensions import Annotated
 from neptun import ERRORS
-from neptun.utils.config_parser import ConfigManager
-
+from neptun.utils.authentication_manager import AuthenticationManager
+from rich.prompt import Prompt
+from rich.text import Text
+from rich.panel import Panel
+from secrets import compare_digest
 
 console = Console()
-config_manager = ConfigManager()
+authentication_manager = AuthenticationManager()
+
+auth_app = typer.Typer(name="Authentication Manager",
+                       help="This tool is allows you to directly connect the neptun-web-client.")
 
 
-config_app = typer.Typer(name="Authentication Manager", help="This tool allows you to manage and configure general "
-                                                          "settings for your application with ease. You can add new "
-                                                          "configurations, remove existing ones.")
+def login_prompt():
+    email = Prompt.ask("Enter your email")
+    password = Prompt.ask("Enter your password", password=True)
+    print(f"Email: {email}")
+    print(f"Password: {'*' * len(password)}")
+
+
+auth_app.command(name="login", help="Log in interactively")(login_prompt)
+
+
+def login(
+    email: Annotated[str, typer.Option("--email", help="Email address for login")],
+    password: Annotated[str, typer.Option("--password", help="Password for login", prompt=True, hide_input=True)]
+):
+    print(f"Email: {email}")
+    print(f"Password: {'*' * len(password)}")
+
+
+auth_app.command(name="login-args", help="Log in with command-line arguments")(login)
+
+
+def register_prompt():
+    name = Prompt.ask("Enter your name")
+    email = Prompt.ask("Enter your email")
+    password = Prompt.ask("Enter your password", password=True)
+    retype_password = Prompt.ask("Retype your password", password=True)
+    if compare_digest(password, retype_password):
+        print("Passwords do not match!")
+        return
+    print(f"Name: {name}")
+    print(f"Email: {email}")
+    print(f"Password: {'*' * len(password)}")
+
+
+auth_app.command(name="register", help="Register interactively")(register_prompt)
+
+
+def register(
+    name: Annotated[str, typer.Option("--name", prompt=True, help="Full name of the user")],
+    email: Annotated[str, typer.Option("--email", prompt=True, help="Email address for registration")],
+    password: Annotated[str, typer.Option("--password", prompt=True, help="Password for registration", hide_input=True)],
+    retype_password: Annotated[str, typer.Option("--retype-password", prompt=True, help="Retype the password for confirmation", hide_input=True)]
+):
+    if compare_digest(password, retype_password):
+        print("Passwords do not match!")
+        return
+    print(f"Name: {name}")
+    print(f"Email: {email}")
+    print(f"Password: {'*' * len(password)}")
+
+
+auth_app.command(name="register-args", help="Register using command-line arguments")(register)
