@@ -1,14 +1,19 @@
+import time
+
 from rich.console import Console
 import typer
 from typing_extensions import Annotated
-from neptun.utils.managers import AuthenticationManager
+from neptun.utils.managers import AuthenticationManager, PostManager
 from rich.prompt import Prompt
 import re
 import questionary
 from secrets import compare_digest
+from rich.progress import Progress, SpinnerColumn, TextColumn
+
 
 console = Console()
 authentication_manager = AuthenticationManager()
+post_manager = PostManager()
 
 regex = re.compile(r'([A-Za-z0-9]+[.-_])*[A-Za-z0-9]+@[A-Za-z0-9-]+(\.[A-Z|a-z]{2,})+')
 
@@ -83,3 +88,22 @@ def register(
 
 
 auth_app.command(name="register-args", help="Register using command-line arguments")(register)
+
+
+def get_posts():
+    try:
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            transient=True,
+        ) as progress:
+            task = progress.add_task(description="Fetching...", total=None)
+            posts = post_manager.get_posts()
+            progress.update(task, description="Preparing...")
+            for post in posts:
+                print(post.id)
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+
+auth_app.command(name="posts", help="Test")(get_posts)

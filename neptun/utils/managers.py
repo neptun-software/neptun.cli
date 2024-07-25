@@ -1,12 +1,15 @@
 import configparser
 from functools import wraps
 from pathlib import Path
+from typing import List
 import typer
 from neptun.model.responses import ConfigResponse
 import httpx
 from neptun import SUCCESS, CONFIG_KEY_NOT_FOUND_ERROR, __app_name__, DIR_ERROR, FILE_ERROR
 import json
-from neptun.model import http_requests, http_responses
+from neptun.model.http_responses import PostHttpResponse, Post
+from neptun.utils.services import AuthenticationService, PostService
+
 
 CONFIG_DIR_PATH = Path(typer.get_app_dir(__app_name__))
 CONFIG_FILE_PATH = CONFIG_DIR_PATH / "config/config.ini"
@@ -175,8 +178,8 @@ class ConfigManager:
 @singleton
 class AuthenticationManager:
     def __init__(self):
-        self.client = httpx.Client()
         self.config_manager = ConfigManager()
+        self.auth_service = AuthenticationService()
 
     def login(self, username, password) -> ConfigResponse:
 
@@ -189,13 +192,21 @@ class AuthenticationManager:
         pass
 
 
+@singleton
+class PostManager:
+    def __init__(self):
+        self.post_service = PostService()
+
+    def get_posts(self) -> List[Post]:
+        return self.post_service.get_posts()
+
+
 # Example usage
 if __name__ == "__main__":
 
     config_manager_ini = ConfigManager()
 
     config_manager_ini.update_config_dynamically("auth.user.id=penis")
-
 
     config_manager_ini.list_sections()
     config_manager_ini.update_config("auth.user", "id", "hallo")
