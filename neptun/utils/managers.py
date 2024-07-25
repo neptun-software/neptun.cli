@@ -5,22 +5,14 @@ import typer
 from neptun.model.responses import ConfigResponse
 import httpx
 from neptun import SUCCESS, CONFIG_KEY_NOT_FOUND_ERROR, __app_name__, DIR_ERROR, FILE_ERROR
+import json
+from neptun.model import http_requests, http_responses
 
-# Define global paths
 CONFIG_DIR_PATH = Path(typer.get_app_dir(__app_name__))
 CONFIG_FILE_PATH = CONFIG_DIR_PATH / "config/config.ini"
+DEFAULT_CONFIG_FILE_PATH = CONFIG_DIR_PATH / "config/default.json"
 
-
-DEFAULT_CONFIG = {
-    "caching": {
-        "caching_enabled": "True",
-        "cache_name": "cache/neptun_cache",
-        "cache_expiration": "600"
-    },
-    "auth": {
-        "neptun_auth_token": ""
-    },
-}
+DEFAULT_CONFIG = json.load(open(Path(DEFAULT_CONFIG_FILE_PATH))) if Path(DEFAULT_CONFIG_FILE_PATH).exists() else None
 
 
 def singleton(cls):
@@ -56,13 +48,19 @@ class ConfigManager:
         self.config.read(self.config_file_path)
 
     def _write_default_config(self):
-        for section, options in DEFAULT_CONFIG.items():
-            if not self.config.has_section(section):
-                self.config.add_section(section)
-            for key, value in options.items():
-                self.config.set(section, key, value)
+        """Write the default configuration to the file."""
         with open(self.config_file_path, 'w') as configfile:
-            self.config.write(configfile)
+            self._write_section(configfile, "", DEFAULT_CONFIG)
+
+    def _write_section(self, file, parent_section, section_dict, level=0):
+        """Write a section and its nested sections to the file."""
+        for key, value in section_dict.items():
+            section_name = f"{parent_section}.{key}" if parent_section else key
+            if isinstance(value, dict):
+                file.write(f"\n[{section_name}]\n")
+                self._write_section(file, section_name, value, level + 1)
+            else:
+                file.write(f"{key} = {value}\n")
 
     def _ensure_config_file_exists(self):
         """Ensure the configuration directory and file exist."""
@@ -134,8 +132,12 @@ class ConfigManager:
 
     @ensure_latest_config
     def update_config_dynamically(self, query: str) -> ConfigResponse:
-        section, rest = query.split('.', 1)
-        key, value = rest.split('=', 1)
+        section_value, rest = query.split('=', 1)
+
+        value = rest
+        key = section_value.split('.')[-1]
+        section = '.'.join(section_value.split('.')[:-1])
+
         return self.update_config(section, key, value)
 
     def update_with_fallback(self) -> ConfigResponse:
@@ -173,9 +175,11 @@ class ConfigManager:
 @singleton
 class AuthenticationManager:
     def __init__(self):
+        self.client = httpx.Client()
         self.config_manager = ConfigManager()
 
     def login(self, username, password) -> ConfigResponse:
+
         pass
 
     def register(self, username, password) -> ConfigResponse:
@@ -187,9 +191,12 @@ class AuthenticationManager:
 
 # Example usage
 if __name__ == "__main__":
-    # Instantiate ConfigManager for INI file
+
     config_manager_ini = ConfigManager()
 
+    config_manager_ini.update_config_dynamically("auth.user.id=penis")
+
+
     config_manager_ini.list_sections()
-    config_manager_ini.update_config("auth", "neptun_auth_token", "pimmel")
+    config_manager_ini.update_config("auth.user", "id", "hallo")
 
