@@ -9,6 +9,11 @@ class SignUpHttpRequest(BaseModel):
     password: str
 
 
+class LoginHttpRequest(BaseModel):
+    email: str = Field(serialization_alias="email")
+    password: str
+
+
 class Post(BaseModel):
     user_id: int = Field(..., alias="userId")
     id: int

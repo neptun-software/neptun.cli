@@ -4,8 +4,8 @@ import httpx
 from httpx import AsyncClient
 from pydantic import ValidationError
 from neptun.utils.managers import ConfigManager
-from neptun.model.http_requests import SignUpHttpRequest
-from neptun.model.http_responses import SignUpResponse, ErrorResponse
+from neptun.model.http_requests import SignUpHttpRequest, LoginHttpRequest
+from neptun.model.http_responses import SignUpResponse, ErrorResponse, LoginResponse
 from neptun.utils.exceptions import JsonError, FileError, UpdateConfigError, BaseAppError, NoInternetConnectionError
 
 
@@ -28,8 +28,22 @@ class AuthenticationService:
         self.client = httpx.AsyncClient()
         self.config_manager = ConfigManager()
 
-    def login(self):
-        pass
+    async def login(self, login_up_http_request: LoginHttpRequest) -> Union[LoginResponse, ErrorResponse]:
+        url = f"{self.config_manager.read_config("utils", "neptun_api_server_host")}/auth/login"
+
+        async with self.client:
+            response = await self.client.post(url, data=login_up_http_request.dict())
+
+            response_data = response.json()
+
+            try:
+                session_cookie = None if not response.cookies.get("nuxai-session") else response.cookies.get(
+                    "nuxai-session")
+                login_response = LoginResponse.parse_obj(response_data)
+                login_response.session_cookie = session_cookie
+                return login_response
+            except ValidationError:
+                return ErrorResponse.parse_obj(response_data)
 
     async def sign_up(self, sign_up_http_request: SignUpHttpRequest) -> Union[SignUpResponse, ErrorResponse]:
         url = f"{self.config_manager.read_config("utils", "neptun_api_server_host")}/auth/sign-up"

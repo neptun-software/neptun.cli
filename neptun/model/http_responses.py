@@ -21,6 +21,15 @@ class SignUpResponse(BaseModel):
         return self.dict(by_alias=True)
 
 
+class LoginResponse(BaseModel):
+    user: User = Field(..., alias='user')
+    session_cookie: str = None
+    logged_in_at: str = Field(..., alias='loggedInAt')
+
+    def to_json(self):
+        return self.dict(by_alias=True)
+
+
 class Issue(BaseModel):
     code: str
     message: str
