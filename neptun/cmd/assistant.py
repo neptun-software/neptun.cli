@@ -1,8 +1,12 @@
+import asyncio
+
 import questionary
 import typer
 from rich.console import Console
 from neptun.bot.neptunbot import NeptunChatBot
 from rich.markdown import Markdown
+from io import StringIO
+
 
 assistant_app = typer.Typer(name="Neptun Chatbot", help="Start chatting with the neptun-chatbot.")
 
@@ -24,7 +28,11 @@ def chat():
         if not user_input:
             continue
         response = bot.respond(user_input)
-        console.print(f"Bot: {response}")
+        if response.startswith("markdown:"):
+            markdown_content = response[len("markdown:"):].strip()
+            asyncio.run(print_markdown_stream(markdown_content))
+        else:
+            console.print(f"Bot: {response}")
         if "bye" in user_input.lower():
             break
 
@@ -32,24 +40,21 @@ def chat():
 @assistant_app.command(name="ask", help="Ask a question to the bot")
 def ask(question: str):
     response = bot.respond(question)
+    if response.startswith("markdown:"):
+        markdown_content = response[len("markdown:"):].strip()
+        print_markdown_stream(markdown_content)
+    else:
+        console.print(f"Bot: {response}")
 
-    MARKDOWN = """
-# Summary
-Here's an example of some Markdown code:
 
-  ```python
-    print("Hello, World!")
-  ```
-Output
-Hello, World!
-Please note that this will only output text if your browser supports HTML/CSS, as Markdown uses HTML syntax for its formatting. If your browser doesn't support Markdown or CSS, you'll get plain text instead.
-Also note that the output of the code above may vary depending on your specific settings. For example, some browsers may display line breaks differently, or the Markdown syntax may not be recognized by all versions of Markdown.
-So it's always a good idea to test your Markdown code in multiple browsers and devices to ensure that it looks and works the way you want it to.
-    """
+async def print_markdown_stream(markdown_content: str):
+    """Render markdown content line by line from a text stream."""
+    markdown_stream = StringIO(markdown_content)
+    for line in markdown_stream:
+        md = Markdown(line)
+        console.print(md)
+        await asyncio.sleep(0.5)
 
-    md = Markdown(MARKDOWN)
-    console.print(md)
 
-    #console.print(f"Bot: {response}")
 
 
