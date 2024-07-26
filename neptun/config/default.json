@@ -5,7 +5,7 @@
         "cache_expiration": "600"
     },
     "utils": {
-        "neptun_api_server_host": "https://nuxai-chat.vercel.app/"
+        "neptun_api_server_host": "https://nuxai-chat.vercel.app/api"
     },
     "auth": {
         "neptun_session_cookie": "",

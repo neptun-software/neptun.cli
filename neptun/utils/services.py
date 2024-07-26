@@ -1,9 +1,11 @@
 from functools import wraps
-from typing import List
+from typing import List, Union
 import httpx
+from httpx import AsyncClient
 from pydantic import ValidationError
+from neptun.utils.managers import ConfigManager
 from neptun.model.http_requests import SignUpHttpRequest
-from neptun.model.http_responses import PostHttpResponse, Post
+from neptun.model.http_responses import SignUpResponse, ErrorResponse
 from neptun.utils.exceptions import JsonError, FileError, UpdateConfigError, BaseAppError, NoInternetConnectionError
 
 
@@ -23,36 +25,50 @@ def singleton(cls):
 class AuthenticationService:
 
     def __init__(self):
-        self.client = httpx.Client()
+        self.client = httpx.AsyncClient()
+        self.config_manager = ConfigManager()
 
     def login(self):
-
         pass
 
-    def sign_up(self, sign_up_http_request: SignUpHttpRequest):
-        return self.client.post('', json=sign_up_http_request.model_dump_json())
+    async def sign_up(self, sign_up_http_request: SignUpHttpRequest) -> Union[SignUpResponse, ErrorResponse]:
+        url = f"{self.config_manager.read_config("utils", "neptun_api_server_host")}/auth/sign-up"
 
+        async with self.client:
+            response = await self.client.post(url, data=sign_up_http_request.dict())
 
-@singleton
-class PostService:
+            response_data = response.json()
 
-    def __init__(self):
-        self.client = httpx.Client()
-
-    def get_posts(self) -> List[Post]:
-        try:
-            response = self.client.get('https://jsonplaceholder.typicode.com/posts')
-            response.raise_for_status()
-            return PostHttpResponse.parse_obj(response.json()).root
-        except httpx.HTTPStatusError as e:
-            raise JsonError() from e
-        except httpx.RequestError as e:
-            raise NoInternetConnectionError() from e
-        except Exception as e:
-            raise BaseAppError(-1, str(e)) from e
+            try:
+                session_cookie = None if not response.cookies.get("nuxai-session") else response.cookies.get("nuxai-session")
+                sign_up_response = SignUpResponse.parse_obj(response_data)
+                sign_up_response.session_cookie = session_cookie
+                return sign_up_response
+            except ValidationError:
+                return ErrorResponse.parse_obj(response_data)
 
 
 if __name__ == "__main__":
-    post_service = PostService()
+    url = "https://example.com/api"  # Replace with your actual URL
 
-    print(post_service.get_posts())
+    signup_http_request = SignUpHttpRequest(email='fopifdfis@dadyil.com', password='dnffdsfdsaffJ_89f')
+
+    auth_service = AuthenticationService()
+
+    result = auth_service.sign_up(sign_up_http_request=signup_http_request)
+
+    if isinstance(result, SignUpResponse):
+        print(f"User ID: {result.user.id}")
+        print(f"Primary Email: {result.user.email}")
+        print(f"Logged In At: {result.logged_in_at}")
+        if result.session_cookie:
+            print(f"Session Cookie: {result.session_cookie}")
+    elif isinstance(result, ErrorResponse):
+        print(f"Error {result.statusCode}: {result.statusMessage}")
+        if result.data:
+            for issue in result.data.issues:
+                print(f" - {issue.message} (path: {'/'.join(issue.path)})")
+        else:
+            print("No additional error data available.")
+
+

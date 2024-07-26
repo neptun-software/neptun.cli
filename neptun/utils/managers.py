@@ -192,5 +192,6 @@ if __name__ == "__main__":
     config_manager_ini.update_config_dynamically("auth.user.id=penis")
 
     config_manager_ini.list_sections()
+    print(config_manager_ini.read_config("auth.user", "id"))
     config_manager_ini.update_config("auth.user", "id", "hallo")
 

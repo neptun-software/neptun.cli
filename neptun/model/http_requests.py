@@ -6,15 +6,7 @@ import httpx
 
 class SignUpHttpRequest(BaseModel):
     email: str = Field(serialization_alias="email")
-    password: SecretStr
-    password_bytes: SecretBytes
-
-    @field_serializer('password', 'password_bytes', when_used='json')
-    def dump_secret(self, v):
-        return v.get_secret_value()
-
-
-signup_http_request = SignUpHttpRequest(email='test@gmail.com', password='test', password_bytes=b'test')
+    password: str
 
 
 class Post(BaseModel):

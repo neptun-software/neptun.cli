@@ -1,24 +1,28 @@
+import asyncio
 import time
 
 from rich.console import Console
 import typer
 from typing_extensions import Annotated
-from neptun.utils.services import AuthenticationService, PostService
-from rich.prompt import Prompt
+from neptun.model.http_requests import SignUpHttpRequest
+from neptun.model.http_responses import SignUpResponse, ErrorResponse
+from neptun.utils.services import AuthenticationService
 import re
 import questionary
 from secrets import compare_digest
 from rich.progress import Progress, SpinnerColumn, TextColumn
-
+from rich.console import Console
+from rich.table import Table
 
 console = Console()
 authentication_service = AuthenticationService()
-post_service = PostService()
 
 regex = re.compile(r'([A-Za-z0-9]+[.-_])*[A-Za-z0-9]+@[A-Za-z0-9-]+(\.[A-Z|a-z]{2,})+')
 
 
 def is_valid(email):
+    if email is None:
+        raise typer.Exit()
     if re.fullmatch(regex, email):
         return True
     else:
@@ -58,52 +62,69 @@ auth_app.command(name="login-args", help="Log in with command-line arguments")(l
 
 
 def register_prompt():
-    name = Prompt.ask("Enter your name")
-    email = Prompt.ask("Enter your email")
-    password = Prompt.ask("Enter your password", password=True)
-    retype_password = Prompt.ask("Retype your password", password=True)
-    if compare_digest(password, retype_password):
-        print("Passwords do not match!")
-        return
-    print(f"Name: {name}")
-    print(f"Email: {email}")
-    print(f"Password: {'*' * len(password)}")
+
+    email = questionary.text("Enter your email:").ask()
+
+    if not is_valid(email):
+        typer.secho(f"Invalid email-format!", fg=typer.colors.RED)
+        raise typer.Exit()
+
+    password = questionary.password("Enter your password:").ask()
+
+    if password is None:
+        raise typer.Exit()
+
+    retype_password = questionary.password("Retype your password:").ask()
+
+    if retype_password is None:
+        raise typer.Exit()
+
+    if not compare_digest(password, retype_password):
+        typer.secho(f"Passwords do not match!", fg=typer.colors.RED)
+        raise typer.Exit()
+
+    with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            transient=True,
+    ) as progress:
+        progress.add_task(description="Tyring to register...", total=None)
+
+        signup_http_request = SignUpHttpRequest(email=email, password=password)
+
+        result = asyncio.run(authentication_service.sign_up(sign_up_http_request=signup_http_request))
+
+        if isinstance(result, SignUpResponse):
+            print(f"User ID: {result.user.id}")
+            print(f"Primary Email: {result.user.email}")
+            print(f"Logged In At: {result.logged_in_at}")
+            if result.session_cookie:
+                print(f"Session Cookie: {result.session_cookie}")
+        elif isinstance(result, ErrorResponse):
+            console.print("\n")
+            if result.data:
+                table = Table()
+                table.add_column(f"Issue: {result.statusCode} - {result.statusMessage}", justify="left", style="red", no_wrap=True)
+                for issue in result.data.issues:
+                    table.add_row(f"{issue.message}")
+
+                console.print(table)
+            else:
+                typer.secho(f"Issue: {result.statusCode} - {result.statusMessage}: Email address already exists!", fg=typer.colors.RED)
 
 
 auth_app.command(name="register", help="Register interactively")(register_prompt)
 
 
 def register(
-    name: Annotated[str, typer.Option("--name", prompt=True, help="Full name of the user")],
     email: Annotated[str, typer.Option("--email", prompt=True, help="Email address for registration")],
-    password: Annotated[str, typer.Option("--password", prompt=True, help="Password for registration", hide_input=True)],
-    retype_password: Annotated[str, typer.Option("--retype-password", prompt=True, help="Retype the password for confirmation", hide_input=True)]
+    password: Annotated[str, typer.Option("--password", prompt=True, help="Password for registration", hide_input=True)]
 ):
-    if compare_digest(password, retype_password):
-        print("Passwords do not match!")
+
+    if not is_valid(email):
+        typer.secho(f"Invalid email-format!", fg=typer.colors.RED)
         return
-    print(f"Name: {name}")
-    print(f"Email: {email}")
-    print(f"Password: {'*' * len(password)}")
 
 
 auth_app.command(name="register-args", help="Register using command-line arguments")(register)
 
-
-def get_posts():
-    try:
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            transient=True,
-        ) as progress:
-            task = progress.add_task(description="Fetching...", total=None)
-            posts = post_service.get_posts()
-            progress.update(task, description="Preparing...")
-            for post in posts:
-                print(post.id)
-    except Exception as e:
-        print(f"An error occurred: {e}")
-
-
-auth_app.command(name="posts", help="Test")(get_posts)

@@ -1,8 +1,8 @@
 {
     "caching": {
         "caching_enabled": "True",
-        "cache_name": "cache/neptun_cached",
-        "cache_expiration": "900"
+        "cache_name": "cache/neptun_cache",
+        "cache_expiration": "600"
     },
     "utils": {
         "neptun_api_server_host": "https://nusafxai-chat.vercel.app/"
