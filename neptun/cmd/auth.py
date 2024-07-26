@@ -3,7 +3,7 @@ import time
 from rich.console import Console
 import typer
 from typing_extensions import Annotated
-from neptun.utils.managers import AuthenticationManager, PostManager
+from neptun.utils.services import AuthenticationService, PostService
 from rich.prompt import Prompt
 import re
 import questionary
@@ -12,8 +12,8 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 
 
 console = Console()
-authentication_manager = AuthenticationManager()
-post_manager = PostManager()
+authentication_service = AuthenticationService()
+post_service = PostService()
 
 regex = re.compile(r'([A-Za-z0-9]+[.-_])*[A-Za-z0-9]+@[A-Za-z0-9-]+(\.[A-Z|a-z]{2,})+')
 
@@ -98,7 +98,7 @@ def get_posts():
             transient=True,
         ) as progress:
             task = progress.add_task(description="Fetching...", total=None)
-            posts = post_manager.get_posts()
+            posts = post_service.get_posts()
             progress.update(task, description="Preparing...")
             for post in posts:
                 print(post.id)

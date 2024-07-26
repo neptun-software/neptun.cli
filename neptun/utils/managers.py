@@ -1,14 +1,11 @@
 import configparser
+import os
 from functools import wraps
 from pathlib import Path
-from typing import List
 import typer
 from neptun.model.responses import ConfigResponse
-import httpx
 from neptun import SUCCESS, CONFIG_KEY_NOT_FOUND_ERROR, __app_name__, DIR_ERROR, FILE_ERROR
 import json
-from neptun.model.http_responses import PostHttpResponse, Post
-from neptun.utils.services import AuthenticationService, PostService
 
 
 CONFIG_DIR_PATH = Path(typer.get_app_dir(__app_name__))
@@ -50,9 +47,21 @@ class ConfigManager:
         self._ensure_config_file_exists()
         self.config.read(self.config_file_path)
 
-    def _write_default_config(self):
+    def search_for_configuration_and_configure(self):
+        current_working_directory = Path(f"{os.getcwd()}/{__app_name__}-config.json")
+
+        confid_data = json.load(open(Path(current_working_directory))) if Path(current_working_directory).exists() else None
+
+        return self._write_default_config(config_file_path=confid_data)
+
+    def _write_default_config(self, config_file_path=DEFAULT_CONFIG):
         """Write the default configuration to the file."""
         with open(self.config_file_path, 'w') as configfile:
+            self._write_section(configfile, "", config_file_path)
+
+    def write_provided_custom_config(self, path: str):
+        """Write the provided configuration to the file."""
+        with open(path, 'w') as configfile:
             self._write_section(configfile, "", DEFAULT_CONFIG)
 
     def _write_section(self, file, parent_section, section_dict, level=0):
@@ -173,32 +182,6 @@ class ConfigManager:
         except OSError:
             return FILE_ERROR
         return SUCCESS
-
-
-@singleton
-class AuthenticationManager:
-    def __init__(self):
-        self.config_manager = ConfigManager()
-        self.auth_service = AuthenticationService()
-
-    def login(self, username, password) -> ConfigResponse:
-
-        pass
-
-    def register(self, username, password) -> ConfigResponse:
-        pass
-
-    def request_auth_token(self, username, password) -> ConfigResponse:
-        pass
-
-
-@singleton
-class PostManager:
-    def __init__(self):
-        self.post_service = PostService()
-
-    def get_posts(self) -> List[Post]:
-        return self.post_service.get_posts()
 
 
 # Example usage

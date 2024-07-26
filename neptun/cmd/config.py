@@ -69,7 +69,7 @@ config_app.command(name="caching", help="Enable/Disable request-caching.")(confi
 
 
 def configure_auth_token(val: Annotated[str, typer.Option("--value")]):
-    update_config_error = config_manager.update_config_dynamically(query=f"auth.neptun_auth_token={val}")
+    update_config_error = config_manager.update_config_dynamically(query=f"auth.neptun_session_cookie={val}")
 
     if update_config_error:
         typer.secho(
@@ -80,4 +80,17 @@ def configure_auth_token(val: Annotated[str, typer.Option("--value")]):
         typer.secho(f"Successfully set auth-key to: {val}", fg=typer.colors.GREEN)
 
 
-config_app.command(name="auth-token", help="Update your neptun-auth-token.")(configure_auth_token)
+config_app.command(name="session-token", help="Update your neptun-auth-token.")(configure_auth_token)
+
+
+def search_for_configuration_and_configure():
+    use_provided_config = typer.confirm("Are you sure you want to use the custom configuration?")
+    if not use_provided_config:
+        raise typer.Abort()
+
+    update_config_error = config_manager.search_for_configuration_and_configure()
+
+
+config_app.command(name="init", help="Init your neptun-configuration-file provided by the web-ui.")(search_for_configuration_and_configure)
+
+

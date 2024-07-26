@@ -1,0 +1,22 @@
+{
+    "caching": {
+        "caching_enabled": "True",
+        "cache_name": "cache/neptun_cached",
+        "cache_expiration": "900"
+    },
+    "utils": {
+        "neptun_api_server_host": "https://nusafxai-chat.vercel.app/"
+    },
+    "auth": {
+        "neptun_session_cookie": "",
+        "user": {
+            "id": "",
+            "email": ""
+        }
+    },
+    "active_chat":{
+        "chat_id": "",
+        "chat_name": "",
+        "model": "OpenAssistant/oasst-sft-4-pythia-12b-epoch-3.5"
+    }
+}
