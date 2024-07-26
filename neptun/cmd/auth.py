@@ -10,12 +10,15 @@ from neptun.utils.services import AuthenticationService
 import re
 import questionary
 from secrets import compare_digest
+from neptun.utils.managers import ConfigManager
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.console import Console
 from rich.table import Table
 
 console = Console()
 authentication_service = AuthenticationService()
+config_manager = ConfigManager()
+
 
 regex = re.compile(r'([A-Za-z0-9]+[.-_])*[A-Za-z0-9]+@[A-Za-z0-9-]+(\.[A-Z|a-z]{2,})+')
 
@@ -88,20 +91,17 @@ def register_prompt():
             TextColumn("[progress.description]{task.description}"),
             transient=True,
     ) as progress:
-        progress.add_task(description="Tyring to register...", total=None)
+        progress.add_task(description="Trying to register...", total=None)
 
         signup_http_request = SignUpHttpRequest(email=email, password=password)
 
         result = asyncio.run(authentication_service.sign_up(sign_up_http_request=signup_http_request))
 
+        console.print("\n")
         if isinstance(result, SignUpResponse):
-            print(f"User ID: {result.user.id}")
-            print(f"Primary Email: {result.user.email}")
-            print(f"Logged In At: {result.logged_in_at}")
-            if result.session_cookie:
-                print(f"Session Cookie: {result.session_cookie}")
+            config_manager.update_authentication(id=result.user.id, email=result.user.email, session_cookie=result.session_cookie)
+            typer.secho(f"Successfully signed up!", fg=typer.colors.GREEN)
         elif isinstance(result, ErrorResponse):
-            console.print("\n")
             if result.data:
                 table = Table()
                 table.add_column(f"Issue: {result.statusCode} - {result.statusMessage}", justify="left", style="red", no_wrap=True)

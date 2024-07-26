@@ -4,6 +4,7 @@ from functools import wraps
 from pathlib import Path
 import typer
 from neptun.model.responses import ConfigResponse
+from neptun.model.http_responses import SignUpResponse
 from neptun import SUCCESS, CONFIG_KEY_NOT_FOUND_ERROR, __app_name__, DIR_ERROR, FILE_ERROR
 import json
 
@@ -158,6 +159,12 @@ class ConfigManager:
             return SUCCESS
         except FileNotFoundError:
             return DIR_ERROR
+
+    def update_authentication(self, id, session_cookie, email):
+        self.write_config("auth.user", "id", str(id))
+        self.write_config("auth.user", "email", str(email))
+        self.write_config("auth", "neptun_session_cookie", str(session_cookie))
+        return SUCCESS
 
     @ensure_latest_config
     def get_config_as_dict(self) -> dict:
