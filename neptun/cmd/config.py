@@ -86,7 +86,3 @@ def search_for_configuration_and_configure():
         raise typer.Abort()
 
     update_config_error = config_manager.search_for_configuration_and_configure()
-
-
-
-

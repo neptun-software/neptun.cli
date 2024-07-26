@@ -27,5 +27,5 @@ dist
 .secrets.*
 .idea
 .vscode
-README.pdf
+*.pdf
 
