@@ -1,6 +1,5 @@
 from rich.console import Console
 import typer
-from typing_extensions import Annotated
 from neptun import ERRORS
 from neptun.utils.managers import ConfigManager
 
@@ -12,7 +11,9 @@ config_app = typer.Typer(name="Configuration Manager", help="This tool allows yo
                                                           "configurations, remove existing ones.")
 
 
-def update_config_dynamically(query: Annotated[str, typer.Option("--query")]):
+@config_app.command(name="dynamic",
+                    help="Edit your app-settings dynamically")
+def update_config_dynamically(query: str):
     update_config_error = config_manager.update_config_dynamically(query=query)
     if update_config_error:
         typer.secho(
@@ -24,9 +25,8 @@ def update_config_dynamically(query: Annotated[str, typer.Option("--query")]):
         typer.secho(f"Successfully updated the configuration with: {query}", fg=typer.colors.GREEN)
 
 
-config_app.command(name="dynamic", help="Edit your app-settings dynamically")(update_config_dynamically)
-
-
+@config_app.command(name="fallback",
+                    help="Fallback to the default settings if you have messed up the configuration file.")
 def update_with_fallback():
     fallback = typer.confirm("Are you sure you want to fallback to the default configuration?")
     if not fallback:
@@ -43,10 +43,9 @@ def update_with_fallback():
         typer.secho(f"Successfully updated the configuration with the fallback.", fg=typer.colors.GREEN)
 
 
-config_app.command(name="fallback", help="Fallback to the default settings if you have messed up the configuration file.")(update_with_fallback)
-
-
-def configure_caching(val: Annotated[str, typer.Option("--value")]):
+@config_app.command(name="caching",
+                    help="Enable/Disable request-caching.")
+def configure_caching(val: str):
     if val not in ["True", "False", "true", "false"]:
         typer.secho(
             f'The value must be [True/False]!"',
@@ -65,10 +64,9 @@ def configure_caching(val: Annotated[str, typer.Option("--value")]):
         typer.secho(f"Successfully set caching to {val}", fg=typer.colors.GREEN)
 
 
-config_app.command(name="caching", help="Enable/Disable request-caching.")(configure_caching)
-
-
-def configure_auth_token(val: Annotated[str, typer.Option("--value")]):
+@config_app.command(name="session-token",
+                    help="Update your neptun-auth-token.")
+def configure_auth_token(val: str):
     update_config_error = config_manager.update_config_dynamically(query=f"auth.neptun_session_cookie={val}")
 
     if update_config_error:
@@ -80,9 +78,8 @@ def configure_auth_token(val: Annotated[str, typer.Option("--value")]):
         typer.secho(f"Successfully set auth-key to: {val}", fg=typer.colors.GREEN)
 
 
-config_app.command(name="session-token", help="Update your neptun-auth-token.")(configure_auth_token)
-
-
+@config_app.command(name="init",
+                    help="Init your neptun-configuration-file provided by the web-ui.")
 def search_for_configuration_and_configure():
     use_provided_config = typer.confirm("Are you sure you want to use the custom configuration?")
     if not use_provided_config:
@@ -91,6 +88,5 @@ def search_for_configuration_and_configure():
     update_config_error = config_manager.search_for_configuration_and_configure()
 
 
-config_app.command(name="init", help="Init your neptun-configuration-file provided by the web-ui.")(search_for_configuration_and_configure)
 
 

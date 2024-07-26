@@ -1,12 +1,10 @@
 from functools import wraps
-from typing import List, Union
+from typing import Union
 import httpx
-from httpx import AsyncClient
 from pydantic import ValidationError
 from neptun.utils.managers import ConfigManager
 from neptun.model.http_requests import SignUpHttpRequest, LoginHttpRequest
 from neptun.model.http_responses import SignUpResponse, ErrorResponse, LoginResponse
-from neptun.utils.exceptions import JsonError, FileError, UpdateConfigError, BaseAppError, NoInternetConnectionError
 
 
 def singleton(cls):
