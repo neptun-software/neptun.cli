@@ -58,7 +58,8 @@ def login():
 
         result = asyncio.run(authentication_service.login(login_up_http_request=login_http_request))
 
-        console.print("\n")
+        progress.stop()
+
         if isinstance(result, LoginResponse):
             config_manager.update_authentication(id=result.user.id,
                                                  email=result.user.email,
@@ -121,7 +122,7 @@ def register():
 
         result = asyncio.run(authentication_service.sign_up(sign_up_http_request=signup_http_request))
 
-        console.print("\n")
+        progress.stop()
         if isinstance(result, SignUpResponse):
             config_manager.update_authentication(id=result.user.id,
                                                  email=result.user.email,

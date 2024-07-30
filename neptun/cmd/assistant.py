@@ -10,7 +10,7 @@ from neptun.utils.services import ChatService
 from neptun.model.http_responses import ChatsResponse, GeneralErrorResponse
 from rich.markdown import Markdown
 from io import StringIO
-
+from questionary import prompt, Separator
 
 assistant_app = typer.Typer(name="Neptun Chatbot", help="Start chatting with the neptun-chatbot.")
 
@@ -54,23 +54,41 @@ def chat():
 
         result = asyncio.run(chat_service.get_available_ai_chats())
 
+        questions = [
+            {
+                "type": "select",
+                "name": "select_chat",
+                "message": "Select an available chat:",
+                "choices": [chat.name for chat in result.chats] if result.chats else ["Create a new chat"],
+            },
+            {
+                "type": "text",
+                "name": "name_new_chat",
+                "message": "Name the chat:",
+                "when": lambda x: x["select_chat"] == "Create a new chat",
+            },
+            {
+                "type": "select",
+                "name": "select_new_chat_model",
+                "message": "Select a ai-base-model:",
+                "when": lambda x: x["name_new_chat"],
+                "choices": ["OpenAssistant/oasst-sft-4-pythia-12b-epoch-3.5",
+                            "mistralai/Mistral-7B-Instruct-v0.1"],
+            }
+        ]
+
         if isinstance(result, ChatsResponse):
             progress.stop()
-            action = (
-                    questionary.select(
-                        "Select a available chat.",
-                        choices=[chat.name for chat in result.chats],
-                    ).ask()
-                    or None
-            )
-            print(f"You chose {action}")
+
+            prompt_data = prompt(questions)
+
         elif isinstance(result, GeneralErrorResponse):
             print(result.statusMessage)
 
     '''
     console.print("Chat bot started! Type 'bye' to exit.\n")
     while True:
-        user_input = questionary.text("You:").ask()
+        user_input = questionary.text(""You:").ask()
         if not user_input:
             continue
         response = bot.respond(user_input)
