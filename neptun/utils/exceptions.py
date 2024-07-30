@@ -42,3 +42,8 @@ class IdError(BaseAppError):
 class NoInternetConnectionError(BaseAppError):
     def __init__(self):
         super().__init__(NO_INTERNET_CONNECTION_ERROR)
+
+
+class NotAuthenticatedError(BaseAppError):
+    def __init__(self):
+        super().__init__(NO_INTERNET_CONNECTION_ERROR)

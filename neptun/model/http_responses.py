@@ -44,3 +44,21 @@ class ErrorResponse(BaseModel):
     statusMessage: str
     stack: List[str] = Field(default_factory=list)
     data: Optional[ErrorResponseData] = None
+
+
+class Chat(BaseModel):
+    id: int
+    name: str
+    model: str
+    created_at: str
+    updated_at: str
+    chat_user_id: Optional[int]
+
+
+class ChatsResponse(BaseModel):
+    chats: Optional[List[Chat]]
+
+
+class GeneralErrorResponse(BaseModel):
+    statusCode: int
+    statusMessage: str

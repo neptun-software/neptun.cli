@@ -1,10 +1,14 @@
+import asyncio
 from functools import wraps
 from typing import Union
 import httpx
 from pydantic import ValidationError
 from neptun.utils.managers import ConfigManager
 from neptun.model.http_requests import SignUpHttpRequest, LoginHttpRequest
-from neptun.model.http_responses import SignUpResponse, ErrorResponse, LoginResponse
+from neptun.model.http_responses import SignUpResponse, GeneralErrorResponse, ErrorResponse, LoginResponse, \
+    ChatsResponse
+from neptun.utils.exceptions import NotAuthenticatedError
+import httpx_cache
 
 
 def singleton(cls):
@@ -17,6 +21,20 @@ def singleton(cls):
         return instances[cls]
 
     return get_instance
+
+
+def ensure_authenticated(method):
+    @wraps(method)
+    def wrapper(self, *args, **kwargs):
+        id = self.config_manager.read_config(section='auth.user', key='id')
+        neptun_session_token = self.config_manager.read_config(section='auth', key='neptun_session_cookie')
+
+        if neptun_session_token is None or id is None:
+            raise NotAuthenticatedError()
+
+        return method(self, *args, **kwargs)
+
+    return wrapper
 
 
 @singleton
@@ -52,7 +70,8 @@ class AuthenticationService:
             response_data = response.json()
 
             try:
-                session_cookie = None if not response.cookies.get("nuxai-session") else response.cookies.get("nuxai-session")
+                session_cookie = None if not response.cookies.get("nuxai-session") else response.cookies.get(
+                    "nuxai-session")
                 sign_up_response = SignUpResponse.parse_obj(response_data)
                 sign_up_response.session_cookie = session_cookie
                 return sign_up_response
@@ -60,27 +79,41 @@ class AuthenticationService:
                 return ErrorResponse.parse_obj(response_data)
 
 
+@singleton
+class ChatService:
+    def __init__(self):
+        self.config_manager = ConfigManager()
+        self.client = httpx_cache.AsyncClient(cookies={"nuxai-session": self.config_manager
+                                              .read_config(section="auth",
+                                                           key="neptun_session_cookie")})
+
+    async def get_available_ai_chats(self):
+        id = self.config_manager.read_config("auth.user", "id")
+        url = f"{self.config_manager.read_config("utils", "neptun_api_server_host")}/users/{id}/chats"
+
+        async with self.client:
+            response = await self.client.get(url)
+
+            response_data = response.json()
+
+            try:
+                chat_response = ChatsResponse.parse_obj(response_data)
+                return chat_response
+            except ValidationError:
+                return GeneralErrorResponse.parse_obj(response_data)
+
+
 if __name__ == "__main__":
     url = "https://example.com/api"  # Replace with your actual URL
 
-    signup_http_request = SignUpHttpRequest(email='fopifdfis@dadyil.com', password='dnffdsfdsaffJ_89f')
+    chat_service = ChatService()
 
-    auth_service = AuthenticationService()
+    try:
+        result = asyncio.run(chat_service.get_available_ai_chats())
 
-    result = auth_service.sign_up(sign_up_http_request=signup_http_request)
-
-    if isinstance(result, SignUpResponse):
-        print(f"User ID: {result.user.id}")
-        print(f"Primary Email: {result.user.email}")
-        print(f"Logged In At: {result.logged_in_at}")
-        if result.session_cookie:
-            print(f"Session Cookie: {result.session_cookie}")
-    elif isinstance(result, ErrorResponse):
-        print(f"Error {result.statusCode}: {result.statusMessage}")
-        if result.data:
-            for issue in result.data.issues:
-                print(f" - {issue.message} (path: {'/'.join(issue.path)})")
-        else:
-            print("No additional error data available.")
-
-
+        if isinstance(result, ChatsResponse):
+            print(result)
+        elif isinstance(result, GeneralErrorResponse):
+            print(result.statusMessage)
+    except NotAuthenticatedError:
+        print("Not authenticated!")
