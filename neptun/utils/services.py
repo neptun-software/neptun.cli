@@ -125,7 +125,7 @@ if __name__ == "__main__":
     chat_service = ChatService()
 
     try:
-        result = asyncio.run(chat_service.create_chat(create_chat_request))
+        result = chat_service.create_chat(create_chat_request)
 
         if isinstance(result, CreateChatHttpResponse):
             print(result)

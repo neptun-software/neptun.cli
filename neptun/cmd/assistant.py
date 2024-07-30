@@ -1,4 +1,5 @@
 import asyncio
+import re
 from functools import wraps
 import typer
 from rich.console import Console
@@ -57,6 +58,9 @@ def create_ai_chat(create_chat_http_request: CreateChatHttpRequest):
         if isinstance(result, CreateChatHttpResponse):
             typer.secho(f"Successfully created a chat!",
                         fg=typer.colors.GREEN)
+            config_manager.update_active_chat(id=result.chat.id,
+                                              name=result.chat.name,
+                                              model=result.chat.model)
         elif isinstance(result, ErrorResponse):
             if result.data:
                 table = Table()
@@ -82,14 +86,17 @@ def chat():
                           total=None)
 
         result = chat_service.get_available_ai_chats()
+        chat_dict = {f"{chat.id}: {chat.name}:[{chat.model}]": chat for chat in result.chats}
+        chat_choices = [f"{chat.id}: {chat.name}:[{chat.model}]" for chat in result.chats[:5]] + [Separator(),
+                                                                                             "New Chat()"] if result.chats else [
+            "New Chat()"]
 
         questions = [
             {
                 "type": "select",
                 "name": "select_chat",
                 "message": "Select an available chat:",
-                "choices": [chat.name for chat in result.chats[:5]] + [Separator(), "New Chat()"]
-                if result.chats else ["New Chat()"],
+                "choices": chat_choices,
             },
             {
                 "type": "text",
@@ -103,7 +110,7 @@ def chat():
                 "message": "Select a ai-base-model:",
                 "when": lambda x: x.get("name_new_chat") is not None,
                 "choices": ["OpenAssistant/oasst-sft-4-pythia-12b-epoch-3.5",
-                            "mistralai/Mistral-7B-Instruct-v0.1"],
+                            "mistralai/Mistral-7B-Instruct-v0.1"]
             }
         ]
 
@@ -118,6 +125,17 @@ def chat():
                     new_chat_model = prompt_data.get("select_new_chat_model")
                     create_chat_http_request = CreateChatHttpRequest(name=new_chat_name, model=new_chat_model)
                     create_ai_chat(create_chat_http_request=create_chat_http_request)
+                case _:
+                    selected_chat_object = chat_dict.get(prompt_data.get("select_chat"))
+
+                    try:
+                        config_manager.update_active_chat(id=selected_chat_object.id,
+                                                          name=selected_chat_object.name,
+                                                          model=selected_chat_object.model)
+                        typer.secho(f"Successfully selected: {selected_chat_object.name}!",
+                                    fg=typer.colors.GREEN)
+                    except Exception:
+                        typer.secho("Error occurred while writing configuration-file.", fg="red", bold=True)
 
         elif isinstance(result, GeneralErrorResponse):
             print(result.statusMessage)

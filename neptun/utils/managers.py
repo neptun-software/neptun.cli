@@ -165,6 +165,12 @@ class ConfigManager:
         self.write_config("auth", "neptun_session_cookie", str(session_cookie))
         return SUCCESS
 
+    def update_active_chat(self, id, name, model):
+        self.write_config("active_chat", "chat_id", str(id))
+        self.write_config("active_chat", "chat_name", str(name))
+        self.write_config("active_chat", "model", str(model))
+        return SUCCESS
+
     @ensure_latest_config
     def get_config_as_dict(self) -> dict:
         return {section: dict(self.config[section]) for section in self.config.sections()}
