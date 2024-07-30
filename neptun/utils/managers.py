@@ -4,7 +4,6 @@ from functools import wraps
 from pathlib import Path
 import typer
 from neptun.model.responses import ConfigResponse
-from neptun.model.http_responses import SignUpResponse
 from neptun import SUCCESS, CONFIG_KEY_NOT_FOUND_ERROR, __app_name__, DIR_ERROR, FILE_ERROR
 import json
 

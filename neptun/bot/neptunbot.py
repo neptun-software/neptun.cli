@@ -1,6 +1,7 @@
 import asyncio
 from neptun.utils.managers import ConfigManager
 
+
 class NeptunChatBot:
     def __init__(self):
         self.config_manger = ConfigManager()

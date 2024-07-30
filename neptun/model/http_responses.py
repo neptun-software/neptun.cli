@@ -10,7 +10,7 @@ class User(BaseModel):
         return self.dict(by_alias=True)
 
 
-class SignUpResponse(BaseModel):
+class SignUpHttpResponse(BaseModel):
     user: User = Field(..., alias='user')
     session_cookie: str = None
     logged_in_at: str = Field(..., alias='loggedInAt')
@@ -19,7 +19,7 @@ class SignUpResponse(BaseModel):
         return self.dict(by_alias=True)
 
 
-class LoginResponse(BaseModel):
+class LoginHttpResponse(BaseModel):
     user: User = Field(..., alias='user')
     session_cookie: str = None
     logged_in_at: str = Field(..., alias='loggedInAt')
@@ -55,10 +55,14 @@ class Chat(BaseModel):
     chat_user_id: Optional[int]
 
 
-class ChatsResponse(BaseModel):
+class ChatsHttpResponse(BaseModel):
     chats: Optional[List[Chat]]
 
 
 class GeneralErrorResponse(BaseModel):
     statusCode: int
     statusMessage: str
+
+
+class CreateChatHttpResponse(BaseModel):
+    chat: Chat

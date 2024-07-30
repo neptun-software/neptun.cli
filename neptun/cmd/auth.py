@@ -1,7 +1,6 @@
-import asyncio
 import typer
 from neptun.model.http_requests import SignUpHttpRequest, LoginHttpRequest
-from neptun.model.http_responses import SignUpResponse, ErrorResponse, LoginResponse
+from neptun.model.http_responses import SignUpHttpResponse, ErrorResponse, LoginHttpResponse
 from neptun.utils.services import AuthenticationService
 import re
 import questionary
@@ -56,11 +55,11 @@ def login():
         login_http_request = LoginHttpRequest(email=email,
                                               password=password)
 
-        result = asyncio.run(authentication_service.login(login_up_http_request=login_http_request))
+        result = authentication_service.login(login_up_http_request=login_http_request)
 
         progress.stop()
 
-        if isinstance(result, LoginResponse):
+        if isinstance(result, LoginHttpResponse):
             config_manager.update_authentication(id=result.user.id,
                                                  email=result.user.email,
                                                  session_cookie=result.session_cookie)
@@ -120,10 +119,10 @@ def register():
         signup_http_request = SignUpHttpRequest(email=email,
                                                 password=password)
 
-        result = asyncio.run(authentication_service.sign_up(sign_up_http_request=signup_http_request))
+        result = authentication_service.sign_up(sign_up_http_request=signup_http_request)
 
         progress.stop()
-        if isinstance(result, SignUpResponse):
+        if isinstance(result, SignUpHttpResponse):
             config_manager.update_authentication(id=result.user.id,
                                                  email=result.user.email,
                                                  session_cookie=result.session_cookie)

@@ -4,9 +4,9 @@ from typing import Union
 import httpx
 from pydantic import ValidationError
 from neptun.utils.managers import ConfigManager
-from neptun.model.http_requests import SignUpHttpRequest, LoginHttpRequest
-from neptun.model.http_responses import SignUpResponse, GeneralErrorResponse, ErrorResponse, LoginResponse, \
-    ChatsResponse
+from neptun.model.http_requests import SignUpHttpRequest, LoginHttpRequest, CreateChatHttpRequest
+from neptun.model.http_responses import SignUpHttpResponse, GeneralErrorResponse, ErrorResponse, LoginHttpResponse, \
+    ChatsHttpResponse, CreateChatHttpResponse
 from neptun.utils.exceptions import NotAuthenticatedError
 import httpx_cache
 
@@ -41,38 +41,38 @@ def ensure_authenticated(method):
 class AuthenticationService:
 
     def __init__(self):
-        self.client = httpx.AsyncClient()
+        self.client = httpx.Client()
         self.config_manager = ConfigManager()
 
-    async def login(self, login_up_http_request: LoginHttpRequest) -> Union[LoginResponse, ErrorResponse]:
+    def login(self, login_up_http_request: LoginHttpRequest) -> Union[LoginHttpResponse, ErrorResponse]:
         url = f"{self.config_manager.read_config("utils", "neptun_api_server_host")}/auth/login"
 
-        async with self.client:
-            response = await self.client.post(url, data=login_up_http_request.dict())
+        with self.client:
+            response = self.client.post(url, data=login_up_http_request.dict())
 
             response_data = response.json()
 
             try:
                 session_cookie = None if not response.cookies.get("nuxai-session") else response.cookies.get(
                     "nuxai-session")
-                login_response = LoginResponse.parse_obj(response_data)
+                login_response = LoginHttpResponse.parse_obj(response_data)
                 login_response.session_cookie = session_cookie
                 return login_response
             except ValidationError:
                 return ErrorResponse.parse_obj(response_data)
 
-    async def sign_up(self, sign_up_http_request: SignUpHttpRequest) -> Union[SignUpResponse, ErrorResponse]:
+    def sign_up(self, sign_up_http_request: SignUpHttpRequest) -> Union[SignUpHttpResponse, ErrorResponse]:
         url = f"{self.config_manager.read_config("utils", "neptun_api_server_host")}/auth/sign-up"
 
-        async with self.client:
-            response = await self.client.post(url, data=sign_up_http_request.dict())
+        with self.client:
+            response = self.client.post(url, data=sign_up_http_request.dict())
 
             response_data = response.json()
 
             try:
                 session_cookie = None if not response.cookies.get("nuxai-session") else response.cookies.get(
                     "nuxai-session")
-                sign_up_response = SignUpResponse.parse_obj(response_data)
+                sign_up_response = SignUpHttpResponse.parse_obj(response_data)
                 sign_up_response.session_cookie = session_cookie
                 return sign_up_response
             except ValidationError:
@@ -83,37 +83,53 @@ class AuthenticationService:
 class ChatService:
     def __init__(self):
         self.config_manager = ConfigManager()
-        self.client = httpx_cache.AsyncClient(cookies={"nuxai-session": self.config_manager
-                                              .read_config(section="auth",
-                                                           key="neptun_session_cookie")})
+        self.client = httpx.Client(cookies={"nuxai-session": self.config_manager
+                                        .read_config(section="auth",
+                                                     key="neptun_session_cookie")})
 
-    async def get_available_ai_chats(self):
+    def get_available_ai_chats(self):
+        id = self.config_manager.read_config("auth.user", "id")
+        url = f"{self.config_manager.read_config("utils",
+                                                 "neptun_api_server_host")}/users/{id}/chats?order_by=updated_at:desc"
+
+        response = self.client.get(url)
+
+        response_data = response.json()
+
+        try:
+            chat_response = ChatsHttpResponse.parse_obj(response_data)
+            return chat_response
+        except ValidationError:
+            return GeneralErrorResponse.parse_obj(response_data)
+
+    def create_chat(self, create_chat_http_request: CreateChatHttpRequest) \
+            -> Union[CreateChatHttpResponse, ErrorResponse]:
         id = self.config_manager.read_config("auth.user", "id")
         url = f"{self.config_manager.read_config("utils", "neptun_api_server_host")}/users/{id}/chats"
 
-        async with self.client:
-            response = await self.client.get(url)
+        response = self.client.post(url, data=create_chat_http_request.dict())
 
-            response_data = response.json()
+        response_data = response.json()
 
-            try:
-                chat_response = ChatsResponse.parse_obj(response_data)
-                return chat_response
-            except ValidationError:
-                return GeneralErrorResponse.parse_obj(response_data)
+        try:
+            chat_response = CreateChatHttpResponse.parse_obj(response_data)
+            return chat_response
+        except ValidationError:
+            return ErrorResponse.parse_obj(response_data)
 
 
 if __name__ == "__main__":
     url = "https://example.com/api"  # Replace with your actual URL
 
+    create_chat_request = CreateChatHttpRequest(name="te", model="OpenAssistant/oasst-sft-4-pythia-12b-epoch-3.5")
     chat_service = ChatService()
 
     try:
-        result = asyncio.run(chat_service.get_available_ai_chats())
+        result = asyncio.run(chat_service.create_chat(create_chat_request))
 
-        if isinstance(result, ChatsResponse):
+        if isinstance(result, CreateChatHttpResponse):
             print(result)
-        elif isinstance(result, GeneralErrorResponse):
-            print(result.statusMessage)
+        elif isinstance(result, ErrorResponse):
+            print(result.data)
     except NotAuthenticatedError:
         print("Not authenticated!")

@@ -1,14 +1,15 @@
 import asyncio
 from functools import wraps
-import questionary
 import typer
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from neptun.bot.neptunbot import NeptunChatBot
 from neptun.utils.managers import ConfigManager
 from neptun.utils.services import ChatService
-from neptun.model.http_responses import ChatsResponse, GeneralErrorResponse
+from neptun.model.http_responses import ChatsHttpResponse, GeneralErrorResponse, ErrorResponse, CreateChatHttpResponse
+from neptun.model.http_requests import CreateChatHttpRequest
 from rich.markdown import Markdown
+from rich.table import Table
 from io import StringIO
 from questionary import prompt, Separator
 
@@ -41,9 +42,37 @@ def main(ctx: typer.Context):
         chat()
 
 
-@ensure_authenticated
-def chat():
+def create_ai_chat(create_chat_http_request: CreateChatHttpRequest):
+    with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            transient=True,
+    ) as progress:
+        progress.add_task(description="Creating new chat...",
+                          total=None)
 
+        result = chat_service.create_chat(create_chat_http_request=create_chat_http_request)
+
+        progress.stop()
+        if isinstance(result, CreateChatHttpResponse):
+            typer.secho(f"Successfully created a chat!",
+                        fg=typer.colors.GREEN)
+        elif isinstance(result, ErrorResponse):
+            if result.data:
+                table = Table()
+                table.add_column(f"Issue: {result.statusCode} - {result.statusMessage}",
+                                 justify="left", style="red",
+                                 no_wrap=True)
+                for issue in result.data.issues:
+                    table.add_row(f"{issue.message}")
+
+                console.print(table)
+            else:
+                typer.secho(f"Issue: {result.statusCode} - {result.statusMessage}: Email address already exists!",
+                            fg=typer.colors.RED)
+
+
+def chat():
     with Progress(
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),
@@ -52,35 +81,43 @@ def chat():
         progress.add_task(description="Collecting available chats...",
                           total=None)
 
-        result = asyncio.run(chat_service.get_available_ai_chats())
+        result = chat_service.get_available_ai_chats()
 
         questions = [
             {
                 "type": "select",
                 "name": "select_chat",
                 "message": "Select an available chat:",
-                "choices": [chat.name for chat in result.chats] if result.chats else ["Create a new chat"],
+                "choices": [chat.name for chat in result.chats[:5]] + [Separator(), "New Chat()"]
+                if result.chats else ["New Chat()"],
             },
             {
                 "type": "text",
                 "name": "name_new_chat",
                 "message": "Name the chat:",
-                "when": lambda x: x["select_chat"] == "Create a new chat",
+                "when": lambda x: x["select_chat"] == "New Chat()",
             },
             {
                 "type": "select",
                 "name": "select_new_chat_model",
                 "message": "Select a ai-base-model:",
-                "when": lambda x: x["name_new_chat"],
+                "when": lambda x: x.get("name_new_chat") is not None,
                 "choices": ["OpenAssistant/oasst-sft-4-pythia-12b-epoch-3.5",
                             "mistralai/Mistral-7B-Instruct-v0.1"],
             }
         ]
 
-        if isinstance(result, ChatsResponse):
+        if isinstance(result, ChatsHttpResponse):
             progress.stop()
 
             prompt_data = prompt(questions)
+
+            match prompt_data.get("select_chat"):
+                case "New Chat()":
+                    new_chat_name = prompt_data.get("name_new_chat")
+                    new_chat_model = prompt_data.get("select_new_chat_model")
+                    create_chat_http_request = CreateChatHttpRequest(name=new_chat_name, model=new_chat_model)
+                    create_ai_chat(create_chat_http_request=create_chat_http_request)
 
         elif isinstance(result, GeneralErrorResponse):
             print(result.statusMessage)
