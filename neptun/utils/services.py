@@ -8,7 +8,6 @@ from neptun.model.http_requests import SignUpHttpRequest, LoginHttpRequest, Crea
 from neptun.model.http_responses import SignUpHttpResponse, GeneralErrorResponse, ErrorResponse, LoginHttpResponse, \
     ChatsHttpResponse, CreateChatHttpResponse
 from neptun.utils.exceptions import NotAuthenticatedError
-import httpx_cache
 
 
 def singleton(cls):
@@ -84,8 +83,8 @@ class ChatService:
     def __init__(self):
         self.config_manager = ConfigManager()
         self.client = httpx.Client(cookies={"nuxai-session": self.config_manager
-                                        .read_config(section="auth",
-                                                     key="neptun_session_cookie")})
+                                   .read_config(section="auth",
+                                                key="neptun_session_cookie")})
 
     def get_available_ai_chats(self):
         id = self.config_manager.read_config("auth.user", "id")
@@ -101,6 +100,19 @@ class ChatService:
             return chat_response
         except ValidationError:
             return GeneralErrorResponse.parse_obj(response_data)
+
+    def delete_selected_chat(self, chat_id):
+
+        id = self.config_manager.read_config("auth.user", "id")
+        url = f"{self.config_manager.read_config("utils",
+                                                 "neptun_api_server_host")}/users/{id}/chats/{chat_id}"
+        response = self.client.delete(url)
+
+        try:
+            response = self.client.delete(url)
+            return True
+        except Exception:
+            return False
 
     def create_chat(self, create_chat_http_request: CreateChatHttpRequest) \
             -> Union[CreateChatHttpResponse, ErrorResponse]:

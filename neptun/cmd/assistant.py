@@ -45,7 +45,23 @@ def main(ctx: typer.Context):
         chat()
 
 
-def create_ai_chat(create_chat_http_request: CreateChatHttpRequest):
+def create_new_chat_dialog():
+    new_chat_name = questionary.text(
+        message="Name the chat:"
+    ).ask()
+
+    if new_chat_name is None:
+        raise typer.Exit()
+
+    new_chat_model = questionary.select(message="Select a ai-base-model:",
+                                        choices=["OpenAssistant/oasst-sft-4-pythia-12b-epoch-3.5",
+                                                 "mistralai/Mistral-7B-Instruct-v0.1"]).ask()
+
+    if new_chat_model is None:
+        raise typer.Exit()
+
+    create_chat_http_request = CreateChatHttpRequest(name=new_chat_name, model=new_chat_model)
+
     with Progress(
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),
@@ -78,7 +94,7 @@ def create_ai_chat(create_chat_http_request: CreateChatHttpRequest):
                             fg=typer.colors.RED)
 
 
-def list_available_chats():
+def list_available_chats_dialog():
     with Progress(
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),
@@ -101,6 +117,9 @@ def list_available_chats():
                 choices=chat_choices
             ).ask()
 
+            if action is None:
+                raise typer.Exit()
+
             selected_chat_object = chat_dict.get(action)
 
             config_manager.update_active_chat(id=selected_chat_object.id,
@@ -113,46 +132,58 @@ def list_available_chats():
             print(result.statusMessage)
 
 
-def delete_selected_chat():
-    raise NotImplemented
+def delete_selected_chat_dialog():
+    with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            transient=True,
+    ) as progress:
+        collecting_data_task = progress.add_task(description="Collecting available chats...",
+                          total=None)
+
+        result = chat_service.get_available_ai_chats()
+        chat_dict = {f"{chat.id}: {chat.name}:[{chat.model}]": chat for chat in result.chats}
+        chat_choices = [f"{chat.id}: {chat.name}:[{chat.model}]" for chat in result.chats[:5]]
+
+        if isinstance(result, ChatsHttpResponse):
+            progress.update(collecting_data_task, completed=True, visible=False)
+
+            action = questionary.select(
+                message="Select an available chat:",
+                choices=chat_choices
+            ).ask()
+
+            if action is None:
+                raise typer.Exit()
+
+            selected_chat_object = chat_dict.get(action)
+
+            deleting_data_task = progress.add_task(description="Deleting selected chat...",
+                              total=None)
+
+            deleted_chat = chat_service.delete_selected_chat(selected_chat_object.id)
+
+            if deleted_chat is True:
+                progress.update(deleting_data_task, completed=True, visible=False)
+                progress.stop()
+                typer.secho(f"Successfully deleted chat: {selected_chat_object.name}.", fg=typer.colors.GREEN)
+            else:
+                typer.secho(f"Failed to delete chat: {selected_chat_object.name}.", fg=typer.colors.RED)
 
 
 def chat():
-
     choice = questionary.select(
         "Choose an available function:",
-        choices=["Enter Chat()", "Delete Chat()", "New Chat()"],
+        choices=["Enter Chat()", "New Chat()", "Delete Chat()"],
     ).ask()
 
     match choice:
         case "New Chat()":
-            new_chat_name = questionary.text(
-                        message="Name the chat:"
-                ).ask()
-
-            new_chat_model = questionary.select(message="Select a ai-base-model:",
-                                                choices=["OpenAssistant/oasst-sft-4-pythia-12b-epoch-3.5",
-                                                    "mistralai/Mistral-7B-Instruct-v0.1"]).ask()
-
-            create_chat_http_request = CreateChatHttpRequest(name=new_chat_name, model=new_chat_model)
-            create_ai_chat(create_chat_http_request=create_chat_http_request)
+            create_new_chat_dialog()
         case "Enter Chat()":
-            list_available_chats()
+            list_available_chats_dialog()
         case "Delete Chat()":
-            delete_selected_chat()
-        case _:
-            '''
-            selected_chat_object = chat_dict.get(prompt_data.get("select_chat"))
-
-            config_manager.update_active_chat(id=selected_chat_object.id,
-                                              name=selected_chat_object.name,
-                                              model=selected_chat_object.model)
-            typer.secho(f"Successfully selected: {selected_chat_object.name}!",
-                        fg=typer.colors.GREEN)
-            print("Nix")
-            '''
-
-
+            delete_selected_chat_dialog()
     '''
     console.print("Chat bot started! Type 'bye' to exit.\n")
     while True:
