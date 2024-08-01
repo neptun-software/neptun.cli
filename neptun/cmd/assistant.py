@@ -39,6 +39,7 @@ def ensure_authenticated(method):
     return wrapper
 
 
+# will automatically start a chat based on the config-files latest id
 @assistant_app.callback(invoke_without_command=True)
 def main(ctx: typer.Context):
     if ctx.invoked_subcommand is None:
@@ -94,7 +95,7 @@ def create_new_chat_dialog():
                             fg=typer.colors.RED)
 
 
-def list_available_chats_dialog():
+def enter_available_chats_dialog():
     with Progress(
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),
@@ -102,8 +103,6 @@ def list_available_chats_dialog():
     ) as progress:
         progress.add_task(description="Collecting available chats...",
                           total=None)
-
-        result = chat_service.get_available_ai_chats()
 
         result = chat_service.get_available_ai_chats()
         chat_dict = {f"{chat.id}: {chat.name}:[{chat.model}]": chat for chat in result.chats}
@@ -127,6 +126,44 @@ def list_available_chats_dialog():
                                               model=selected_chat_object.model)
             typer.secho(f"Successfully selected: {selected_chat_object.name}!",
                         fg=typer.colors.GREEN)
+
+        elif isinstance(result, GeneralErrorResponse):
+            print(result.statusMessage)
+
+
+def list_available_chats():
+    with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            transient=True,
+    ) as progress:
+        progress.add_task(description="Collecting available chats...",
+                          total=None)
+
+        result = chat_service.get_available_ai_chats()
+
+        if isinstance(result, ChatsHttpResponse):
+            progress.stop()
+            table = Table()
+            table.add_column(f"Id",
+                             justify="left",
+                             no_wrap=True)
+            table.add_column(f"Name",
+                             justify="left",
+                             no_wrap=True)
+            table.add_column(f"Model",
+                             justify="left",
+                             no_wrap=True)
+            table.add_column(f"Created At",
+                             justify="left",
+                             no_wrap=True)
+
+            for iterator in result.chats:
+                table.add_row(f"{iterator.id}",
+                              f"{iterator.name}",
+                              f"{iterator.model}",
+                              f"{iterator.created_at}")
+            console.print(table)
 
         elif isinstance(result, GeneralErrorResponse):
             print(result.statusMessage)
@@ -172,22 +209,9 @@ def delete_selected_chat_dialog():
 
 
 def chat():
-    choice = questionary.select(
-        "Choose an available function:",
-        choices=["Enter Chat()", "New Chat()", "Delete Chat()"],
-    ).ask()
-
-    match choice:
-        case "New Chat()":
-            create_new_chat_dialog()
-        case "Enter Chat()":
-            list_available_chats_dialog()
-        case "Delete Chat()":
-            delete_selected_chat_dialog()
-    '''
     console.print("Chat bot started! Type 'bye' to exit.\n")
     while True:
-        user_input = questionary.text(""You:").ask()
+        user_input = questionary.text("You:").ask()
         if not user_input:
             continue
         response = bot.respond(user_input)
@@ -198,7 +222,24 @@ def chat():
             console.print(f"Bot: {response}")
         if "bye" in user_input.lower():
             break
-    '''
+
+
+@assistant_app.command(name="options", help="Open up all options available.")
+def options():
+    choice = questionary.select(
+        "Choose an available function:",
+        choices=["Enter Chat()", "New Chat()", "List Chats()", "Delete Chat()"],
+    ).ask()
+
+    match choice:
+        case "New Chat()":
+            create_new_chat_dialog()
+        case "Enter Chat()":
+            enter_available_chats_dialog()()
+        case "List Chats()":
+            list_available_chats()
+        case "Delete Chat()":
+            delete_selected_chat_dialog()
 
 
 @assistant_app.command(name="ask", help="Ask a question to the bot")
