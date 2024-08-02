@@ -138,3 +138,9 @@ def register():
             else:
                 typer.secho(f"Issue: {result.statusCode} - {result.statusMessage}: Email address already exists!",
                             fg=typer.colors.RED)
+
+
+@auth_app.command(name="status",
+                  help="Get your current authentication-status and user-data if provided.")
+def status():
+    typer.secho("Status called...")
