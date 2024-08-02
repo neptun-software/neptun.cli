@@ -14,7 +14,6 @@ console = Console()
 authentication_service = AuthenticationService()
 config_manager = ConfigManager()
 
-
 regex = re.compile(r'([A-Za-z0-9]+[.-_])*[A-Za-z0-9]+@[A-Za-z0-9-]+(\.[A-Z|a-z]{2,})+')
 
 
@@ -31,8 +30,9 @@ auth_app = typer.Typer(name="Authentication Manager",
                        help="This tool is allows you to directly connect the neptun-web-client.")
 
 
+@auth_app.command(name="login",
+                  help="Log into your neptun-account.")
 def login():
-
     email = questionary.text("Enter your email:").ask()
 
     if not is_valid(email):
@@ -80,12 +80,9 @@ def login():
                             fg=typer.colors.RED)
 
 
-auth_app.command(name="login",
-                 help="Log in interactively")(login)
-
-
+@auth_app.command(name="register",
+                  help="Create a new neptun-account.")
 def register():
-
     email = questionary.text("Enter your email:").ask()
 
     if not is_valid(email):
@@ -141,7 +138,3 @@ def register():
             else:
                 typer.secho(f"Issue: {result.statusCode} - {result.statusMessage}: Email address already exists!",
                             fg=typer.colors.RED)
-
-
-auth_app.command(name="register",
-                 help="Register interactively")(register)

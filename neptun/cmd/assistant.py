@@ -237,7 +237,7 @@ def options():
         case "New Chat()":
             create_new_chat_dialog()
         case "Enter Chat()":
-            enter_available_chats_dialog()()
+            enter_available_chats_dialog()
         case "List Chats()":
             list_available_chats()
         case "Delete Chat()":
