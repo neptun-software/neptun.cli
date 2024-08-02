@@ -106,7 +106,6 @@ class ChatService:
         id = self.config_manager.read_config("auth.user", "id")
         url = f"{self.config_manager.read_config("utils",
                                                  "neptun_api_server_host")}/users/{id}/chats/{chat_id}"
-        response = self.client.delete(url)
 
         try:
             response = self.client.delete(url)
