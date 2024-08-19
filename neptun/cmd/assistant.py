@@ -1,10 +1,7 @@
 import asyncio
-import re
 from functools import wraps
-
 import questionary
 import typer
-from questionary.constants import INDICATOR_SELECTED
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from neptun.bot.neptunbot import NeptunChatBot
@@ -15,7 +12,6 @@ from neptun.model.http_requests import CreateChatHttpRequest
 from rich.markdown import Markdown
 from rich.table import Table
 from io import StringIO
-from questionary import prompt, Separator
 
 assistant_app = typer.Typer(name="Neptun Chatbot", help="Start chatting with the neptun-chatbot.")
 
@@ -44,6 +40,29 @@ def ensure_authenticated(method):
 def main(ctx: typer.Context):
     if ctx.invoked_subcommand is None:
         chat()
+
+
+def print_chat_table(chat):
+    table = Table()
+    table.add_column(f"Id",
+                     justify="left",
+                     no_wrap=True)
+    table.add_column(f"Name",
+                     justify="left",
+                     no_wrap=True)
+    table.add_column(f"Model",
+                     justify="left",
+                     no_wrap=True)
+    table.add_column(f"Created At",
+                     justify="left",
+                     no_wrap=True)
+
+    table.add_row(f"{chat.id}",
+                  f"{chat.name}",
+                  f"{chat.model}",
+                  f"{chat.created_at}")
+
+    console.print(table)
 
 
 def create_new_chat_dialog():
@@ -75,8 +94,12 @@ def create_new_chat_dialog():
 
         progress.stop()
         if isinstance(result, CreateChatHttpResponse):
-            typer.secho(f"Successfully created a chat!",
+
+            typer.secho(f"Successfully created a new chat!",
                         fg=typer.colors.GREEN)
+
+            print_chat_table(result.chat)
+
             config_manager.update_active_chat(id=result.chat.id,
                                               name=result.chat.name,
                                               model=result.chat.model)

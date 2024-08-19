@@ -52,8 +52,8 @@ class AuthenticationService:
             response_data = response.json()
 
             try:
-                session_cookie = None if not response.cookies.get("nuxai-session") else response.cookies.get(
-                    "nuxai-session")
+                session_cookie = None if not response.cookies.get("neptun-session") else response.cookies.get(
+                    "neptun-session")
                 login_response = LoginHttpResponse.parse_obj(response_data)
                 login_response.session_cookie = session_cookie
                 return login_response
@@ -69,8 +69,8 @@ class AuthenticationService:
             response_data = response.json()
 
             try:
-                session_cookie = None if not response.cookies.get("nuxai-session") else response.cookies.get(
-                    "nuxai-session")
+                session_cookie = None if not response.cookies.get("neptun-session") else response.cookies.get(
+                    "neptun-session")
                 sign_up_response = SignUpHttpResponse.parse_obj(response_data)
                 sign_up_response.session_cookie = session_cookie
                 return sign_up_response
@@ -82,7 +82,7 @@ class AuthenticationService:
 class ChatService:
     def __init__(self):
         self.config_manager = ConfigManager()
-        self.client = httpx.Client(cookies={"nuxai-session": self.config_manager
+        self.client = httpx.Client(cookies={"neptun-session": self.config_manager
                                    .read_config(section="auth",
                                                 key="neptun_session_cookie")})
 
