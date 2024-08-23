@@ -20,7 +20,6 @@ class Conversation:
             self.messages = response.chat_messages
             print(response.chat_messages)
         else:
-            print("dsfsafds")
             self.console.print(f"Error fetching messages: {response.detail}", style="bold red")
 
     def send(self, message: str) -> list[str]:

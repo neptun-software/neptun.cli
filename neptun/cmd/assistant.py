@@ -240,24 +240,9 @@ def delete_selected_chat_dialog():
                 typer.secho(f"No chats available!",
                             fg=typer.colors.BRIGHT_YELLOW)
 
+
 def chat():
     bot.run()
-    '''
-    console.print("Chat bot started! Type 'bye' to exit.\n")
-    
-    while True:
-        user_input = questionary.text("You:").ask()
-        if not user_input:
-            continue
-        response = bot.respond(user_input)
-        if response.startswith("markdown:"):
-            markdown_content = response[len("markdown:"):].strip()
-            asyncio.run(print_markdown_stream(markdown_content))
-        else:
-            console.print(f"Bot: {response}")
-        if "bye" in user_input.lower():
-            break
-            '''
 
 
 @assistant_app.command(name="options", help="Open up all options available.")
