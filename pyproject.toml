@@ -15,6 +15,7 @@ pydantic = "^2.8.2"
 configparser = "^7.0.0"
 questionary = "^2.0.1"
 httpx-cache = "^0.13.0"
+textual = "^0.76.0"
 
 
 [build-system]

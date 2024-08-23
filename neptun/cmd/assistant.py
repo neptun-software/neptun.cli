@@ -4,11 +4,11 @@ import questionary
 import typer
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
-from neptun.bot.neptunbot import NeptunChatBot
 from neptun.utils.managers import ConfigManager
 from neptun.utils.services import ChatService
 from neptun.model.http_responses import ChatsHttpResponse, GeneralErrorResponse, ErrorResponse, CreateChatHttpResponse
 from neptun.model.http_requests import CreateChatHttpRequest
+from neptun.bot.tui import NeptunChatApp
 from rich.markdown import Markdown
 from rich.table import Table
 from io import StringIO
@@ -16,7 +16,7 @@ from io import StringIO
 assistant_app = typer.Typer(name="Neptun Chatbot", help="Start chatting with the neptun-chatbot.")
 
 console = Console()
-bot = NeptunChatBot()
+bot = NeptunChatApp()
 chat_service = ChatService()
 config_manager = ConfigManager()
 
@@ -234,7 +234,10 @@ def delete_selected_chat_dialog():
 
 
 def chat():
+    bot.run()
+    '''
     console.print("Chat bot started! Type 'bye' to exit.\n")
+    
     while True:
         user_input = questionary.text("You:").ask()
         if not user_input:
@@ -247,6 +250,7 @@ def chat():
             console.print(f"Bot: {response}")
         if "bye" in user_input.lower():
             break
+            '''
 
 
 @assistant_app.command(name="options", help="Open up all options available.")
@@ -286,7 +290,7 @@ def delete_chat():
 def create_chat():
     create_new_chat_dialog()
 
-
+'''
 @assistant_app.command(name="ask", help="Ask a question to the bot")
 def ask(question: str):
     response = bot.respond(question)
@@ -295,7 +299,7 @@ def ask(question: str):
         print_markdown_stream(markdown_content)
     else:
         console.print(f"Bot: {response}")
-
+'''
 
 async def print_markdown_stream(markdown_content: str):
     """Render markdown content line by line from a text stream."""

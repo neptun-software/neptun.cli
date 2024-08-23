@@ -52,7 +52,7 @@ class Chat(BaseModel):
     model: str
     created_at: str
     updated_at: str
-    chat_user_id: Optional[int]
+    neptun_user_id: Optional[int]
 
 
 class ChatsHttpResponse(BaseModel):
@@ -66,3 +66,18 @@ class GeneralErrorResponse(BaseModel):
 
 class CreateChatHttpResponse(BaseModel):
     chat: Chat
+
+
+class ChatMessage(BaseModel):
+    id: int
+    message: str
+    actor: str
+    created_at: str
+    updated_at: str
+    chat_user_id: int
+    chat_conversation_id: int
+
+
+class ChatMessagesHttpResponse(BaseModel):
+    chat_messages: List[ChatMessage] = Field(..., alias='chatMessages')
+

@@ -6,7 +6,7 @@ from pydantic import ValidationError
 from neptun.utils.managers import ConfigManager
 from neptun.model.http_requests import SignUpHttpRequest, LoginHttpRequest, CreateChatHttpRequest
 from neptun.model.http_responses import SignUpHttpResponse, GeneralErrorResponse, ErrorResponse, LoginHttpResponse, \
-    ChatsHttpResponse, CreateChatHttpResponse
+    ChatsHttpResponse, CreateChatHttpResponse, ChatMessagesHttpResponse
 from neptun.utils.exceptions import NotAuthenticatedError
 
 
@@ -96,10 +96,10 @@ class ChatService:
         response_data = response.json()
 
         try:
-            chat_response = ChatsHttpResponse.parse_obj(response_data)
+            chat_response = ChatsHttpResponse.model_validate(response_data)
             return chat_response
         except ValidationError:
-            return GeneralErrorResponse.parse_obj(response_data)
+            return GeneralErrorResponse.model_validate(response_data)
 
     def delete_selected_chat(self, chat_id):
 
@@ -123,23 +123,38 @@ class ChatService:
         response_data = response.json()
 
         try:
-            chat_response = CreateChatHttpResponse.parse_obj(response_data)
+            chat_response = CreateChatHttpResponse.model_validate(response_data)
             return chat_response
         except ValidationError:
-            return ErrorResponse.parse_obj(response_data)
+            return ErrorResponse.model_validate(response_data)
+
+    def get_chat_messages_by_chat_id(self) \
+            -> Union[ChatMessagesHttpResponse, ErrorResponse]:
+        user_id = self.config_manager.read_config("auth.user", "id")
+        chat_id = self.config_manager.read_config("active_chat", "chat_id")
+
+        url = f"{self.config_manager.read_config("utils", "neptun_api_server_host")}/users/{user_id}/chats/{chat_id}/messages"
+
+        response = self.client.get(url)
+        response_data = response.json()
+
+        try:
+            chat_messages_http_response = ChatMessagesHttpResponse.model_validate(response_data)
+            return chat_messages_http_response
+        except ValidationError:
+            return ErrorResponse.model_validate(response_data)
 
 
 if __name__ == "__main__":
     url = "https://example.com/api"  # Replace with your actual URL
 
-    create_chat_request = CreateChatHttpRequest(name="te", model="OpenAssistant/oasst-sft-4-pythia-12b-epoch-3.5")
     chat_service = ChatService()
 
     try:
-        result = chat_service.create_chat(create_chat_request)
+        result = chat_service.get_chat_messages_by_chat_id()
 
-        if isinstance(result, CreateChatHttpResponse):
-            print(result)
+        if isinstance(result, ChatMessagesHttpResponse):
+            print(result.chat_messages)
         elif isinstance(result, ErrorResponse):
             print(result.data)
     except NotAuthenticatedError:
