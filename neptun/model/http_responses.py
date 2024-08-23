@@ -74,7 +74,7 @@ class ChatMessage(BaseModel):
     actor: str
     created_at: str
     updated_at: str
-    chat_user_id: int
+    neptun_user_id: int
     chat_conversation_id: int
 
 

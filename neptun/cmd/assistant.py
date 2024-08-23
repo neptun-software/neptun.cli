@@ -134,21 +134,25 @@ def enter_available_chats_dialog():
         if isinstance(result, ChatsHttpResponse):
             progress.stop()
 
-            action = questionary.select(
-                message="Select an available chat:",
-                choices=chat_choices
-            ).ask()
+            if result.chats is not None and len(result.chats) > 0:
+                action = questionary.select(
+                    message="Select an available chat:",
+                    choices=chat_choices
+                ).ask()
 
-            if action is None:
-                raise typer.Exit()
+                if action is None:
+                    raise typer.Exit()
 
-            selected_chat_object = chat_dict.get(action)
+                selected_chat_object = chat_dict.get(action)
 
-            config_manager.update_active_chat(id=selected_chat_object.id,
-                                              name=selected_chat_object.name,
-                                              model=selected_chat_object.model)
-            typer.secho(f"Successfully selected: {selected_chat_object.name}!",
-                        fg=typer.colors.GREEN)
+                config_manager.update_active_chat(id=selected_chat_object.id,
+                                                  name=selected_chat_object.name,
+                                                  model=selected_chat_object.model)
+                typer.secho(f"Successfully selected: {selected_chat_object.name}!",
+                            fg=typer.colors.GREEN)
+            else:
+                typer.secho(f"No chats available!",
+                            fg=typer.colors.BRIGHT_YELLOW)
 
         elif isinstance(result, GeneralErrorResponse):
             print(result.statusMessage)
