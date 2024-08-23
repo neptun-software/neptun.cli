@@ -40,11 +40,6 @@ class Conversation:
     def run(self):
         self.fetch_latest_messages()
 
-        while True:
-            msg = input("Type your message: ")
-            response = self.send(msg)
-            print("Here is your message: ", self.messages[-1])
-
 
 if __name__ == "__main__":
     conversation = Conversation()

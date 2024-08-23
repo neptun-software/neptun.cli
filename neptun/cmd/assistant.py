@@ -213,29 +213,32 @@ def delete_selected_chat_dialog():
         if isinstance(result, ChatsHttpResponse):
             progress.update(collecting_data_task, completed=True, visible=False)
 
-            action = questionary.select(
-                message="Select an available chat:",
-                choices=chat_choices,
-            ).ask()
+            if result.chats is not None and len(result.chats) > 0:
+                action = questionary.select(
+                    message="Select an available chat:",
+                    choices=chat_choices,
+                ).ask()
 
-            if action is None:
-                raise typer.Exit()
+                if action is None:
+                    raise typer.Exit()
 
-            selected_chat_object = chat_dict.get(action)
+                selected_chat_object = chat_dict.get(action)
 
-            deleting_data_task = progress.add_task(description="Deleting selected chat...",
-                                                   total=None)
+                deleting_data_task = progress.add_task(description="Deleting selected chat...",
+                                                       total=None)
 
-            deleted_chat = chat_service.delete_selected_chat(selected_chat_object.id)
+                deleted_chat = chat_service.delete_selected_chat(selected_chat_object.id)
 
-            if deleted_chat is True:
-                progress.update(deleting_data_task, completed=True, visible=False)
+                if deleted_chat is True:
+                    progress.update(deleting_data_task, completed=True, visible=False)
 
-                progress.stop()
-                typer.secho(f"Successfully deleted chat: {selected_chat_object.name}.", fg=typer.colors.GREEN)
+                    progress.stop()
+                    typer.secho(f"Successfully deleted chat: {selected_chat_object.name}.", fg=typer.colors.GREEN)
+                else:
+                    typer.secho(f"Failed to delete chat: {selected_chat_object.name}.", fg=typer.colors.RED)
             else:
-                typer.secho(f"Failed to delete chat: {selected_chat_object.name}.", fg=typer.colors.RED)
-
+                typer.secho(f"No chats available!",
+                            fg=typer.colors.BRIGHT_YELLOW)
 
 def chat():
     bot.run()
@@ -304,6 +307,7 @@ def ask(question: str):
     else:
         console.print(f"Bot: {response}")
 '''
+
 
 async def print_markdown_stream(markdown_content: str):
     """Render markdown content line by line from a text stream."""

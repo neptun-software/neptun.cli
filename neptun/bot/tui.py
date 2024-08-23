@@ -6,7 +6,7 @@ from pathlib import Path
 from textual.widget import Widget
 from textual.widgets import Footer, Header, Input, Button, Static
 from textual.containers import Horizontal, Container
-
+from neptun.bot.chat import Conversation
 
 class MessageBox(Widget):
     def __init__(self, text: str, role: str) -> None:
@@ -23,9 +23,14 @@ class NeptunChatApp(App):
     SUB_TITLE = "The NEPTUN-CHATBOT directly in your terminal"
     CSS_PATH = Path(__file__).parent / "static" / "style.css"
 
+    def on_mount(self) -> None:
+        self.conversation = Conversation()
+        self.conversation.run()
+        self.query_one("#message_input", Input).focus()
+
     def compose(self) -> ComposeResult:
         yield Header()
-        yield ScrollView(id="conversation_box")
+        yield Container(id="conversation_box")
         with Horizontal(id="input_box"):
             yield Input(placeholder="Enter your message", id="message_input")
             yield Button(label="Send", id="send_button")
@@ -43,23 +48,21 @@ class NeptunChatApp(App):
 
     async def process_conversation(self) -> None:
         message_input = self.query_one("#message_input", Input)
-        # Don't do anything if input is empty
+        button = self.query_one("#send_button", Button)
+        conversation_box = self.query_one("#conversation_box", Container)
+
         if message_input.value == "":
             return
-        button = self.query_one("#send_button")
-        conversation_box = self.query_one("#conversation_box")  # 🆕
 
         self.toggle_widgets(message_input, button)
 
-        # 🆕 Create question message, add it to the conversation and scroll down
-        message_box = MessageBox(message_input.value, "question")
+        message_box = MessageBox(role="question", text=message_input.value)
         conversation_box.mount(message_box)
         conversation_box.scroll_end(animate=False)
 
         with message_input.prevent(Input.Changed):
             message_input.value = ""
 
-        # 🆕 Add answer to the conversation
         conversation_box.mount(
             MessageBox(
                 "Answer",
@@ -69,6 +72,7 @@ class NeptunChatApp(App):
 
         self.toggle_widgets(message_input, button)
         conversation_box.scroll_end(animate=False)
+
 
 if __name__ == "__main__":
     app = NeptunChatApp()
