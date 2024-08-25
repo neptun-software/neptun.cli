@@ -7,8 +7,6 @@ Screen {
     scrollbar-background: #111929;
     scrollbar-background-active: #111929;
     scrollbar-background-hover: #111929;
-
-
 }
 
 MessageBox {
@@ -39,11 +37,11 @@ MessageBox {
 }
 
 .user {
-    margin: 1 25 1 0;
+    margin: 1 0 1 25;
 }
 
 .assistant {
-    margin: 1 0 1 25;
+    margin: 1 25 1 0;
 }
 
 #input_box {
@@ -81,4 +79,3 @@ Scrollbar{
         background: #d9e3f3;
 
 }
-

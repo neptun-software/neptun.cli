@@ -1,13 +1,16 @@
 import asyncio
+import json
 from functools import wraps
 from typing import Union
+import re
 import httpx
 from pydantic import ValidationError
 from neptun.utils.managers import ConfigManager
-from neptun.model.http_requests import SignUpHttpRequest, LoginHttpRequest, CreateChatHttpRequest
+from neptun.model.http_requests import SignUpHttpRequest, LoginHttpRequest, CreateChatHttpRequest, Message, ChatRequest
 from neptun.model.http_responses import SignUpHttpResponse, GeneralErrorResponse, ErrorResponse, LoginHttpResponse, \
     ChatsHttpResponse, CreateChatHttpResponse, ChatMessagesHttpResponse
 from neptun.utils.exceptions import NotAuthenticatedError
+from neptun.utils.helpers import ChatResponseConverter, ResponseContent
 
 
 def singleton(cls):
@@ -85,6 +88,11 @@ class ChatService:
         self.client = httpx.Client(cookies={"neptun-session": self.config_manager
                                    .read_config(section="auth",
                                                 key="neptun_session_cookie")})
+        self.async_client = httpx.AsyncClient(
+            cookies={"neptun-session": self.config_manager
+                                    .read_config(section="auth",
+                                            key="neptun_session_cookie")}
+        )
 
     def get_available_ai_chats(self):
         id = self.config_manager.read_config("auth.user", "id")
@@ -144,18 +152,66 @@ class ChatService:
         except ValidationError:
             return ErrorResponse.model_validate(response_data)
 
+    def extract_parts(self, s: str):
+        before_slash = s.split('/')[0]
+        after_slash = s.split('/')[1] if '/' in s else ''
+        return before_slash, after_slash
+
+    def post_chat_message(self, messages: ChatRequest) -> str:
+        chat_id = self.config_manager.read_config("active_chat", "chat_id")
+        model = self.config_manager.read_config("active_chat", "model")
+        model_publisher, model_name = self.extract_parts(model)
+
+        url = f"{self.config_manager.read_config('utils', 'neptun_api_server_host')}/ai/huggingface/{model_publisher}/{model_name}/chat?chat_id={chat_id}"
+
+        response = self.client.post(url, json=messages.dict())
+
+        response_data = response.text
+
+        try:
+            return response_data
+        except ValidationError:
+            print("error")
+
+
+def clean_text(text_str: str) -> str:
+    # Clean up text content (if needed)
+    cleaned_text = re.sub(r'\\n', '\n', text_str)  # Replace literal \n with actual newline
+    cleaned_text = re.sub(r'\\\\"', '"""', cleaned_text)  # Replace \\" with """
+    cleaned_text = re.sub(r'\\"', '"', cleaned_text)  # Replace \" with "
+    cleaned_text = re.sub(r'\\\\', '\\', cleaned_text)  # Replace \\\\ with \
+    cleaned_text = re.sub(r'\\', '', cleaned_text)  # Remove any remaining single backslashes
+    return cleaned_text
+
 
 if __name__ == "__main__":
     url = "https://example.com/api"  # Replace with your actual URL
 
     chat_service = ChatService()
 
-    try:
-        result = chat_service.get_chat_messages_by_chat_id()
+    # Create a message
+    message = Message(role="user", content="Generate me fizzbuzz in java!")
 
-        if isinstance(result, ChatMessagesHttpResponse):
-            print(result.chat_messages)
-        elif isinstance(result, ErrorResponse):
-            print(result.data)
+    message_list = [message]
+
+    messages = ChatRequest(messages=message_list)
+
+    try:
+        result = chat_service.post_chat_message(messages)
+
+        chat_converter = ChatResponseConverter(message=result)
+
+        for section in chat_converter.extract_sections():
+            if isinstance(section, ResponseContent):
+                if section.type == "markdown":
+                    # Process markdown section
+                    print(f'```\n{section.content}\n```')
+                elif section.type == "text":
+                    # Process text section
+                    print(f'```\n{section.content}\n```')
+
+            else:
+                print("Unexpected section type:", type(section))
+
     except NotAuthenticatedError:
         print("Not authenticated!")

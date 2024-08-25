@@ -3,7 +3,7 @@ from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal
 from textual.scroll_view import ScrollView
-from textual.widgets import Footer, Header, Placeholder, Input, Button
+from textual.widgets import Footer, Header, Placeholder, Input, Button, Markdown
 from pathlib import Path
 from textual.widget import Widget
 from textual.widgets import Footer, Header, Input, Button, Static
@@ -16,13 +16,21 @@ class FocusableContainer(Container, can_focus=True):
 
 
 class MessageBox(Widget):
-    def __init__(self, text: str, role: str) -> None:
-        self.text = text
-        self.role = role
+    def __init__(self, text: str, role: str, markdown_str: str = "") -> None:
         super().__init__()
+        self.text = text
+        self.markdown_str = markdown_str
+        self.role = role
 
     def compose(self) -> ComposeResult:
-        yield Static(self.text, classes=f"message {self.role}")
+        if self.markdown_str:
+            with Widget(classes=f"message {self.role}"):
+                yield Static(self.text)
+
+                if self.markdown_str:
+                    yield Markdown(self.markdown_str, id="markdown_box")
+        else:
+            yield Static(self.text, classes=f"message {self.role}")
 
 
 class NeptunChatApp(App):
