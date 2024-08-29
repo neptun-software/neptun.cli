@@ -1,11 +1,13 @@
 import asyncio
+
+from neptun.model.http_requests import ChatRequest, Message
 from neptun.utils.managers import ConfigManager
 from neptun.utils.services import ChatService
 from rich.console import Console
 from rich.markdown import Markdown
 from neptun.utils.services import ChatService
 from neptun.model.http_responses import ChatMessage, ChatMessagesHttpResponse, ErrorResponse
-
+from neptun.utils.helpers import ChatResponseConverter
 
 class Conversation:
     def __init__(self):
@@ -22,13 +24,28 @@ class Conversation:
         else:
             self.console.print(f"Error fetching messages: {response.detail}", style="bold red")
 
-    def send(self, message: str) -> list[str]:
-        self.messages.append({"role": "user", "content": message})
+    async def send(self, message: str):
 
-        response = f"Echo: {message}"
-        self.messages.append({"role": "assistant", "content": response})
+        messages = []
 
-        return [response]
+        for iterator in self.messages:
+            messages.append(Message(
+                role=iterator.actor,
+                content=iterator.message
+            ))
+
+        messages.append(Message(
+            role="user",
+            content=message
+        ))
+
+        chat_request = ChatRequest(messages=messages)
+
+        result = self.chat_service.post_chat_message(
+            messages=chat_request
+        )
+
+        return result
 
     def response(self, choice: str) -> None:
         self.messages.append({"role": "assistant", "content": choice})

@@ -82,7 +82,7 @@ class NeptunChatApp(App):
             conversation_box.mount(
                 MessageBox(
                     role=message.actor,
-                    text=message.message,
+                    text=message.message
                 )
             )
 
@@ -103,15 +103,21 @@ class NeptunChatApp(App):
         with message_input.prevent(Input.Changed):
             message_input.value = ""
 
+        result = await self.conversation.send(message_box.text)
+
+        self.action_clear()
+
+        self.list_existing_chats()
 
         self.toggle_widgets(message_input, button)
         conversation_box.scroll_end(animate=False)
 
-    def action_clear(self) -> None:  # 🆕
+    def action_clear(self) -> None:
         self.conversation.clear()
-        conversation_box = self.query_one("#conversation_box")
-        conversation_box.remove()
-        self.mount(FocusableContainer(id="conversation_box"))
+        conversation_box = self.query_one("#conversation_box", Container)
+
+        for child in conversation_box.children:
+            child.remove()
 
 
 if __name__ == "__main__":

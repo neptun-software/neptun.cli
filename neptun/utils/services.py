@@ -204,10 +204,8 @@ if __name__ == "__main__":
         for section in chat_converter.extract_sections():
             if isinstance(section, ResponseContent):
                 if section.type == "markdown":
-                    # Process markdown section
                     print(f'```\n{section.content}\n```')
                 elif section.type == "text":
-                    # Process text section
                     print(f'```\n{section.content}\n```')
 
             else:
