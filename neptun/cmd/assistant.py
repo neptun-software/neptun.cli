@@ -277,6 +277,7 @@ def list_chats():
 @assistant_app.command(name="enter", help="List and automatically enter a chat-dialog.")
 def enter_chat():
     enter_available_chats_dialog()
+    bot.run()
 
 
 @assistant_app.command(name="delete", help="List and delete a chat-dialog.")
