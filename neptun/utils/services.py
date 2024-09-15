@@ -57,7 +57,7 @@ class AuthenticationService:
         self.config_manager = ConfigManager()
 
     def login(self, login_up_http_request: LoginHttpRequest) -> Union[LoginHttpResponse, ErrorResponse]:
-        url = f"{self.config_manager.read_config("utils", "neptun_api_server_host")}/auth/login"
+        url = f"{self.config_manager.read_config('utils', 'neptun_api_server_host')}/auth/login"
 
         with self.client:
             response = self.client.post(url, data=login_up_http_request.dict())
