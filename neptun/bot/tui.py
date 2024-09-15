@@ -20,8 +20,10 @@ logging.basicConfig(
     level=logging.DEBUG          # Minimum logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
 )
 
+
 class FocusableContainer(Container, can_focus=True):
     """Focusable container widget."""
+
 
 class MessageBox(Widget):
     def __init__(self, text: str, role: str, markdown_str: str = "") -> None:
@@ -49,7 +51,7 @@ class NeptunChatApp(App):
     def on_mount(self) -> None:
         self.conversation = Conversation()
         self.query_one("#message_input", Input).focus()
-        self.call_later(self.list_existing_chats)  # Ensure existing chats are loaded
+        self.call_later(self.list_existing_chats)
 
     BINDINGS = [
         Binding("q", "quit", "Quit", key_display="Q / CTRL+C"),
@@ -88,8 +90,8 @@ class NeptunChatApp(App):
         for message in self.conversation.messages[-5:]:
             await conversation_box.mount(
                 MessageBox(
-                    role=message.actor,
-                    text=message.message
+                    role=message.role,
+                    text=message.content
                 )
             )
 
@@ -104,6 +106,7 @@ class NeptunChatApp(App):
         user_message = message_input.value
         user_message_box = MessageBox(role="user", text=user_message)
         await conversation_box.mount(user_message_box)
+
         conversation_box.scroll_end(animate=False)
 
         logging.debug(f"User message: {user_message}")
@@ -117,7 +120,7 @@ class NeptunChatApp(App):
 
             if result:
                 await conversation_box.mount(
-                    MessageBox(role="assistant", text=result)
+                    MessageBox(role="assistant", text=result.content)
                 )
             else:
                 logging.error("No result returned from conversation.send()")

@@ -28,4 +28,5 @@ dist
 .idea
 .vscode
 *.pdf
+*.log
 

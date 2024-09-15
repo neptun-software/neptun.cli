@@ -21,7 +21,7 @@ logging.basicConfig(
 class Conversation:
     def __init__(self):
         self.chat_service = ChatService()
-        self.messages: list[ChatMessage] = []
+        self.messages: list[Message] = []
         self.console = Console()
         self.chat_response_converter = ChatResponseConverter()
 
@@ -30,7 +30,7 @@ class Conversation:
 
         if isinstance(response, ChatMessagesHttpResponse):
             logging.debug(f"Messages Loaded: {response.chat_messages}")
-            self.messages = response.chat_messages
+            self.messages = [Message(role=msg.actor, content=msg.message) for msg in response.chat_messages]
         else:
             self.console.print(f"Error fetching messages: {response.detail}", style="bold red")
 
@@ -45,23 +45,23 @@ class Conversation:
 
         return ''.join(parsed_lines)
 
-    async def send(self, message: str) -> ChatMessage | None:
-        messages = [Message(role=msg.actor, content=msg.message) for msg in self.messages]
-        messages.append(Message(role="user", content=message))
+    async def send(self, message: str) -> Message | None:
+        self.messages.append(Message(role="user", content=message))
 
-        chat_request = ChatRequest(messages=messages)
+        chat_request = ChatRequest(messages=self.messages)
 
         logging.debug(f"Sending chat request: {chat_request.model_dump()}")
 
         try:
             response = await self.chat_service.post_chat_message(chat_request)
-            converted_message = self.chat_response_converter.parse_response(response)
 
-            messages.append(Message(role="user", content=converted_message))
+            converted_message = self.chat_response_converter.parse_response(response)
 
             logging.debug(f"Received response: {converted_message}")
 
-            return converted_message
+            self.messages.append(Message(role="assistant", content=converted_message))
+
+            return self.messages[-1]
         except Exception as e:
             logging.error(f"Error sending message: {e}")
             return None
