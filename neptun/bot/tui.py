@@ -1,19 +1,27 @@
+import asyncio
+import traceback
+
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.containers import Horizontal
-from textual.scroll_view import ScrollView
-from textual.widgets import Footer, Header, Placeholder, Input, Button, Markdown
-from pathlib import Path
-from textual.widget import Widget
-from textual.widgets import Footer, Header, Input, Button, Static
 from textual.containers import Horizontal, Container
+from textual.widgets import Footer, Header, Input, Button, Static
+from textual.widget import Widget
+from textual.widgets import Markdown
+from pathlib import Path
 from neptun.bot.chat import Conversation
+import logging
 
+
+logging.basicConfig(
+    filename='app.log',          # Name of the log file
+    filemode='a',                # Mode to open the file ('w' for overwrite, 'a' for append)
+    format='%(asctime)s - %(levelname)s - %(message)s', # Log format
+    level=logging.DEBUG          # Minimum logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+)
 
 class FocusableContainer(Container, can_focus=True):
     """Focusable container widget."""
-
 
 class MessageBox(Widget):
     def __init__(self, text: str, role: str, markdown_str: str = "") -> None:
@@ -41,9 +49,9 @@ class NeptunChatApp(App):
     def on_mount(self) -> None:
         self.conversation = Conversation()
         self.query_one("#message_input", Input).focus()
-        self.list_existing_chats()
+        self.call_later(self.list_existing_chats)  # Ensure existing chats are loaded
 
-    BINDINGS = [  # 🆕
+    BINDINGS = [
         Binding("q", "quit", "Quit", key_display="Q / CTRL+C"),
         ("ctrl+x", "clear", "Clear"),
     ]
@@ -73,13 +81,12 @@ class NeptunChatApp(App):
         for w in widgets:
             w.disabled = not w.disabled
 
-    def list_existing_chats(self):
+    async def list_existing_chats(self):
         conversation_box = self.query_one("#conversation_box", Container)
-
-        self.conversation.run()
+        await self.conversation.run()
 
         for message in self.conversation.messages[-5:]:
-            conversation_box.mount(
+            await conversation_box.mount(
                 MessageBox(
                     role=message.actor,
                     text=message.message
@@ -91,23 +98,32 @@ class NeptunChatApp(App):
         button = self.query_one("#send_button", Button)
         conversation_box = self.query_one("#conversation_box", Container)
 
-        if message_input.value == "":
-            return
-
+        # Disable the widgets while answering
         self.toggle_widgets(message_input, button)
 
-        message_box = MessageBox(role="question", text=message_input.value)
-        conversation_box.mount(message_box)
+        user_message = message_input.value
+        user_message_box = MessageBox(role="user", text=user_message)
+        await conversation_box.mount(user_message_box)
         conversation_box.scroll_end(animate=False)
+
+        logging.debug(f"User message: {user_message}")
 
         with message_input.prevent(Input.Changed):
             message_input.value = ""
 
-        result = await self.conversation.send(message_box.text)
+        try:
+            result = await self.conversation.send(user_message)
+            logging.debug(f"API response: {result}")
 
-        self.action_clear()
-
-        self.list_existing_chats()
+            if result:
+                await conversation_box.mount(
+                    MessageBox(role="assistant", text=result)
+                )
+            else:
+                logging.error("No result returned from conversation.send()")
+        except Exception as e:
+            logging.error(f"Error in conversation: {e}")
+            logging.error("Exception details:\n" + traceback.format_exc())
 
         self.toggle_widgets(message_input, button)
         conversation_box.scroll_end(animate=False)
@@ -120,6 +136,10 @@ class NeptunChatApp(App):
             child.remove()
 
 
+def main():
+    neptun_bot = NeptunChatApp()
+
+    neptun_bot.run()
+
 if __name__ == "__main__":
-    app = NeptunChatApp()
-    app.run()
+    main()

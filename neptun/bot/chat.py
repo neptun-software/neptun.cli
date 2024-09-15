@@ -1,5 +1,4 @@
 import asyncio
-
 from neptun.model.http_requests import ChatRequest, Message
 from neptun.utils.managers import ConfigManager
 from neptun.utils.services import ChatService
@@ -9,54 +8,78 @@ from neptun.utils.services import ChatService
 from neptun.model.http_responses import ChatMessage, ChatMessagesHttpResponse, ErrorResponse
 from neptun.utils.helpers import ChatResponseConverter
 
+import logging
+
+logging.basicConfig(
+    filename='app.log',  # Name of the log file
+    filemode='a',  # Mode to open the file ('w' for overwrite, 'a' for append)
+    format='%(asctime)s - %(levelname)s - %(message)s',  # Log format
+    level=logging.DEBUG  # Minimum logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+)
+
+
 class Conversation:
     def __init__(self):
         self.chat_service = ChatService()
         self.messages: list[ChatMessage] = []
         self.console = Console()
+        self.chat_response_converter = ChatResponseConverter()
 
-    def fetch_latest_messages(self):
-        response = self.chat_service.get_chat_messages_by_chat_id()
+    async def fetch_latest_messages(self):
+        response = await self.chat_service.get_chat_messages_by_chat_id()
 
         if isinstance(response, ChatMessagesHttpResponse):
+            logging.debug(f"Messages Loaded: {response.chat_messages}")
             self.messages = response.chat_messages
-            print(response.chat_messages)
         else:
             self.console.print(f"Error fetching messages: {response.detail}", style="bold red")
 
-    async def send(self, message: str):
+    def parse_response(self, response: str) -> str:
+        lines = response.splitlines()
 
-        messages = []
+        parsed_lines = []
 
-        for iterator in self.messages:
-            messages.append(Message(
-                role=iterator.actor,
-                content=iterator.message
-            ))
+        for line in lines:
+            parsed_line = line.split(':')[1].strip().strip('"')
+            parsed_lines.append(parsed_line)
 
-        messages.append(Message(
-            role="user",
-            content=message
-        ))
+        return ''.join(parsed_lines)
+
+    async def send(self, message: str) -> ChatMessage | None:
+        messages = [Message(role=msg.actor, content=msg.message) for msg in self.messages]
+        messages.append(Message(role="user", content=message))
 
         chat_request = ChatRequest(messages=messages)
 
-        result = self.chat_service.post_chat_message(
-            messages=chat_request
-        )
+        logging.debug(f"Sending chat request: {chat_request.model_dump()}")
 
-        return result
+        try:
+            response = await self.chat_service.post_chat_message(chat_request)
+            converted_message = self.chat_response_converter.parse_response(response)
 
-    def response(self, choice: str) -> None:
-        self.messages.append({"role": "assistant", "content": choice})
+            messages.append(Message(role="user", content=converted_message))
+
+            logging.debug(f"Received response: {converted_message}")
+
+            return converted_message
+        except Exception as e:
+            logging.error(f"Error sending message: {e}")
+            return None
 
     def clear(self) -> None:
         self.messages = []
 
-    def run(self):
-        self.fetch_latest_messages()
+    async def run(self):
+        await self.fetch_latest_messages()
+
+
+async def main():
+    conversation = Conversation()
+
+    result = await conversation.send("Hello world!")
+
+    print(result.message)
 
 
 if __name__ == "__main__":
-    conversation = Conversation()
-    conversation.run()
+    asyncio.run(main())
