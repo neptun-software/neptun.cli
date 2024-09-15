@@ -74,7 +74,7 @@ class AuthenticationService:
                 return ErrorResponse.parse_obj(response_data)
 
     def sign_up(self, sign_up_http_request: SignUpHttpRequest) -> Union[SignUpHttpResponse, ErrorResponse]:
-        url = f"{self.config_manager.read_config("utils", "neptun_api_server_host")}/auth/sign-up"
+        url = f"{self.config_manager.read_config('utils', 'neptun_api_server_host')}/auth/sign-up"
 
         with self.client:
             response = self.client.post(url, data=sign_up_http_request.dict())
@@ -107,8 +107,8 @@ class ChatService:
 
     def get_available_ai_chats(self):
         id = self.config_manager.read_config("auth.user", "id")
-        url = f"{self.config_manager.read_config("utils",
-                                                 "neptun_api_server_host")}/users/{id}/chats?order_by=updated_at:desc"
+        url = f"{self.config_manager.read_config('utils',
+                                                 'neptun_api_server_host')}/users/{id}/chats?order_by=updated_at:desc"
 
         response = self.client.get(url)
 
@@ -123,8 +123,8 @@ class ChatService:
     def delete_selected_chat(self, chat_id):
 
         id = self.config_manager.read_config("auth.user", "id")
-        url = f"{self.config_manager.read_config("utils",
-                                                 "neptun_api_server_host")}/users/{id}/chats/{chat_id}"
+        url = f"{self.config_manager.read_config('utils',
+                                                 'neptun_api_server_host')}/users/{id}/chats/{chat_id}"
 
         try:
             response = self.client.delete(url)
@@ -135,7 +135,7 @@ class ChatService:
     def create_chat(self, create_chat_http_request: CreateChatHttpRequest) \
             -> Union[CreateChatHttpResponse, ErrorResponse]:
         id = self.config_manager.read_config("auth.user", "id")
-        url = f"{self.config_manager.read_config("utils", "neptun_api_server_host")}/users/{id}/chats"
+        url = f"{self.config_manager.read_config('utils', 'neptun_api_server_host')}/users/{id}/chats"
 
         response = self.client.post(url, data=create_chat_http_request.dict())
 
@@ -152,7 +152,7 @@ class ChatService:
         user_id = self.config_manager.read_config("auth.user", "id")
         chat_id = self.config_manager.read_config("active_chat", "chat_id")
 
-        url = f"{self.config_manager.read_config("utils", "neptun_api_server_host")}/users/{user_id}/chats/{chat_id}/messages"
+        url = f"{self.config_manager.read_config('utils', 'neptun_api_server_host')}/users/{user_id}/chats/{chat_id}/messages"
 
         response = await self.async_client.get(url)
         response_data = response.json()
