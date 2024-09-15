@@ -12,6 +12,16 @@ from neptun.model.http_responses import SignUpHttpResponse, GeneralErrorResponse
 from neptun.utils.exceptions import NotAuthenticatedError
 from neptun.utils.helpers import ChatResponseConverter, ResponseContent
 
+import logging
+
+
+logging.basicConfig(
+    filename='app.log',          # Name of the log file
+    filemode='a',                # Mode to open the file ('w' for overwrite, 'a' for append)
+    format='%(asctime)s - %(levelname)s - %(message)s', # Log format
+    level=logging.DEBUG          # Minimum logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+)
+
 
 def singleton(cls):
     instances = {}
@@ -90,9 +100,10 @@ class ChatService:
                                                 key="neptun_session_cookie")})
         self.async_client = httpx.AsyncClient(
             cookies={"neptun-session": self.config_manager
-                                    .read_config(section="auth",
-                                            key="neptun_session_cookie")}
+            .read_config(section="auth",
+                         key="neptun_session_cookie")}
         )
+        self.chat_response_converter = ChatResponseConverter()
 
     def get_available_ai_chats(self):
         id = self.config_manager.read_config("auth.user", "id")
@@ -136,14 +147,14 @@ class ChatService:
         except ValidationError:
             return ErrorResponse.model_validate(response_data)
 
-    def get_chat_messages_by_chat_id(self) \
+    async def get_chat_messages_by_chat_id(self) \
             -> Union[ChatMessagesHttpResponse, ErrorResponse]:
         user_id = self.config_manager.read_config("auth.user", "id")
         chat_id = self.config_manager.read_config("active_chat", "chat_id")
 
         url = f"{self.config_manager.read_config("utils", "neptun_api_server_host")}/users/{user_id}/chats/{chat_id}/messages"
 
-        response = self.client.get(url)
+        response = await self.async_client.get(url)
         response_data = response.json()
 
         try:
@@ -157,34 +168,45 @@ class ChatService:
         after_slash = s.split('/')[1] if '/' in s else ''
         return before_slash, after_slash
 
-    def post_chat_message(self, messages: ChatRequest) -> str:
-        chat_id = self.config_manager.read_config("active_chat", "chat_id")
-        model = self.config_manager.read_config("active_chat", "model")
-        model_publisher, model_name = self.extract_parts(model)
-
-        url = f"{self.config_manager.read_config('utils', 'neptun_api_server_host')}/ai/huggingface/{model_publisher}/{model_name}/chat?chat_id={chat_id}"
-
-        response = self.client.post(url, json=messages.dict())
-
-        response_data = response.text
-
+    async def post_chat_message(self, messages: ChatRequest) -> Union[str, None]:
         try:
-            return response_data
-        except ValidationError:
-            print("error")
+            chat_id = self.config_manager.read_config("active_chat", "chat_id")
+            model = self.config_manager.read_config("active_chat", "model")
+            model_publisher, model_name = self.extract_parts(model)
+
+            logging.debug(f"Sent object: {messages.json()}")
+
+            url = f"{self.config_manager.read_config('utils', 'neptun_api_server_host')}/ai/huggingface/{model_publisher}/{model_name}/chat?chat_id={chat_id}"
+            logging.debug(f"Constructed URL: {url}")
+
+            response = await self.async_client.post(url, json=messages.dict())
+
+            logging.debug(f"Response received: {response.text}")
+
+            response_data = self.chat_response_converter.parse_response(response=response.text)
+
+            return response.text
+
+        except ValidationError as ve:
+            logging.error(f"Validation error: {ve}")
+        except Exception as e:
+            logging.error(f"An error occurred: {e}")
+        return None
 
 
-def clean_text(text_str: str) -> str:
-    # Clean up text content (if needed)
-    cleaned_text = re.sub(r'\\n', '\n', text_str)  # Replace literal \n with actual newline
-    cleaned_text = re.sub(r'\\\\"', '"""', cleaned_text)  # Replace \\" with """
-    cleaned_text = re.sub(r'\\"', '"', cleaned_text)  # Replace \" with "
-    cleaned_text = re.sub(r'\\\\', '\\', cleaned_text)  # Replace \\\\ with \
-    cleaned_text = re.sub(r'\\', '', cleaned_text)  # Remove any remaining single backslashes
-    return cleaned_text
+def parse_response(response: str) -> str:
+    lines = response.splitlines()
+
+    parsed_lines = []
+
+    for line in lines:
+        parsed_line = line.split(':')[1].strip().strip('"')
+        parsed_lines.append(parsed_line)
+
+    return ''.join(parsed_lines)
 
 
-if __name__ == "__main__":
+async def main():
     url = "https://example.com/api"  # Replace with your actual URL
 
     chat_service = ChatService()
@@ -197,19 +219,26 @@ if __name__ == "__main__":
     messages = ChatRequest(messages=message_list)
 
     try:
-        result = chat_service.post_chat_message(messages)
+        result = await chat_service.post_chat_message(messages)
 
-        chat_converter = ChatResponseConverter(message=result)
+        print(result)
 
-        for section in chat_converter.extract_sections():
-            if isinstance(section, ResponseContent):
-                if section.type == "markdown":
-                    print(f'```\n{section.content}\n```')
-                elif section.type == "text":
-                    print(f'```\n{section.content}\n```')
-
-            else:
-                print("Unexpected section type:", type(section))
+        '''
+            chat_converter = ChatResponseConverter(message=result)
+    
+            for section in chat_converter.extract_sections():
+                if isinstance(section, ResponseContent):
+                    if section.type == "markdown":
+                        print(f'```\n{section.content}\n```')
+                    elif section.type == "text":
+                        print(f'```\n{section.content}\n```')
+                else:
+                    print("Unexpected section type:", type(section))
+        '''
 
     except NotAuthenticatedError:
         print("Not authenticated!")
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
