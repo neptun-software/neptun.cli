@@ -134,10 +134,11 @@ def enter_available_chats_dialog():
                           total=None)
 
         result = chat_service.get_available_ai_chats()
-        chat_dict = {f"{chat.id}: {chat.name}:[{chat.model}]": chat for chat in result.chats}
-        chat_choices = [f"{chat.id}: {chat.name}:[{chat.model}]" for chat in result.chats[:5]]
 
         if isinstance(result, ChatsHttpResponse):
+            chat_dict = {f"{chat.id}: {chat.name}:[{chat.model}]": chat for chat in result.chats}
+            chat_choices = [f"{chat.id}: {chat.name}:[{chat.model}]" for chat in result.chats[:5]]
+            
             progress.stop()
 
             if result.chats is not None and len(result.chats) > 0:
