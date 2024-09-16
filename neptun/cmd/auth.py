@@ -143,4 +143,23 @@ def register():
 @auth_app.command(name="status",
                   help="Get your current authentication-status and user-data if provided.")
 def status():
-    typer.secho("Status called...")
+    neptun_session_cookie = config_manager.read_config('auth', 'neptun_session_cookie')
+    email = config_manager.read_config('auth.user', 'email')
+
+    is_authenticated = neptun_session_cookie not in [None, "None"]
+
+    table = Table()
+    table.add_column("Status: ", justify="left", style="green" if is_authenticated else "red", no_wrap=True)
+    table.add_column("Email: ", justify="left", no_wrap=True)
+    table.add_column("Session Cookie (truncated): ", justify="left", no_wrap=True)
+
+    table.add_row(
+        "Authenticated" if is_authenticated else "Not authenticated",
+        email if email else "No Email Found",
+        f"{neptun_session_cookie[:10]}..." if is_authenticated else "No Session Cookie"
+    )
+
+    console.print(table)
+
+
+
