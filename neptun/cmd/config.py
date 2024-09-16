@@ -2,6 +2,8 @@ from rich.console import Console
 import typer
 from neptun import ERRORS
 from neptun.utils.managers import ConfigManager
+from rich.table import Table
+
 
 console = Console()
 config_manager = ConfigManager()
@@ -74,3 +76,34 @@ def search_for_configuration_and_configure():
 
     except Exception as e:
         typer.secho(f"An error occurred: {e}", fg=typer.colors.RED)
+
+
+@config_app.command(name="status",
+                  help="Get your current configuration-status and user-data if provided.")
+def status():
+    neptun_session_cookie = config_manager.read_config('auth', 'neptun_session_cookie')
+    email = config_manager.read_config('auth.user', 'email')
+    chat_name = config_manager.read_config('active_chat', 'chat_name')
+    chat_model = config_manager.read_config('active_chat', 'model')
+    neptun_api_host = config_manager.read_config('utils', 'neptun_api_server_host')
+
+    is_authenticated = neptun_session_cookie not in [None, "None", ""]
+
+    table = Table(title="Current Configuration Status")
+
+    table.add_column("Email", justify="left", no_wrap=True)
+    table.add_column("Cookie", justify="left", no_wrap=True)
+    table.add_column("NeptunAPIHost", justify="left", no_wrap=True)
+    table.add_column("ChatName", justify="left", no_wrap=True)
+    table.add_column("ChatModel", justify="left", no_wrap=True)
+
+    table.add_row(
+        email if email else "No Email Found",
+        f"{neptun_session_cookie[:5]}..." if is_authenticated else "No Cookie",
+        neptun_api_host if neptun_api_host else "No API-Host Found",
+        chat_name if chat_name else "No Chat Name Found",
+        chat_model if chat_model else "No Chat Model Found",
+    )
+
+    console.print(table)
+
