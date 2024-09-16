@@ -63,6 +63,7 @@ def login():
             config_manager.update_authentication(id=result.user.id,
                                                  email=result.user.email,
                                                  session_cookie=result.session_cookie)
+
             typer.secho(f"Logged in successfully!", fg=typer.colors.GREEN)
         elif isinstance(result, ErrorResponse):
             if result.data:
@@ -146,7 +147,7 @@ def status():
     neptun_session_cookie = config_manager.read_config('auth', 'neptun_session_cookie')
     email = config_manager.read_config('auth.user', 'email')
 
-    is_authenticated = neptun_session_cookie not in [None, "None"]
+    is_authenticated = neptun_session_cookie not in [None, "None", ""]
 
     table = Table()
     table.add_column("Status: ", justify="left", style="green" if is_authenticated else "red", no_wrap=True)

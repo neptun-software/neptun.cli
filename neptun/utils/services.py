@@ -68,6 +68,7 @@ class AuthenticationService:
                 session_cookie = None if not response.cookies.get("neptun-session") else response.cookies.get(
                     "neptun-session")
                 login_response = LoginHttpResponse.parse_obj(response_data)
+
                 login_response.session_cookie = session_cookie
                 return login_response
             except ValidationError:

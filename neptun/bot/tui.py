@@ -1,6 +1,6 @@
 import asyncio
 import traceback
-
+from textual.await_complete import AwaitComplete
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from textual.app import App, ComposeResult
 from textual.binding import Binding
@@ -9,8 +9,17 @@ from textual.widgets import Footer, Header, Input, Button, Static
 from textual.widget import Widget
 from textual.widgets import Markdown
 from pathlib import Path
+from rich.progress import Progress, BarColumn
 from neptun.bot.chat import Conversation
 import logging
+from textual.widgets import LoadingIndicator
+from rich.spinner import Spinner
+
+from rich.progress import Progress, BarColumn
+
+from textual.app import App, ComposeResult
+from textual.widgets import Static
+
 
 
 logging.basicConfig(
@@ -23,6 +32,18 @@ logging.basicConfig(
 
 class FocusableContainer(Container, can_focus=True):
     """Focusable container widget."""
+
+
+class SpinnerWidget(Static):
+    def __init__(self):
+        super().__init__("")
+        self._spinner = Spinner("moon")
+
+    def on_mount(self) -> None:
+        self.update_render = self.set_interval(1 / 60, self.update_spinner)
+
+    def update_spinner(self) -> None:
+        self.update(self._spinner)
 
 
 class MessageBox(Widget):
@@ -41,6 +62,24 @@ class MessageBox(Widget):
                     yield Markdown(self.markdown_str, id="markdown_box")
         else:
             yield Static(self.text, classes=f"message {self.role}")
+
+class IndeterminateProgress(Widget):
+    def __init__(self) -> None:
+        super().__init__()
+        self.progress = Progress()
+        self.task_id = self.progress.add_task("Loading...", total=None)
+        self.loading_indicator = LoadingIndicator()
+
+    def compose(self) -> ComposeResult:
+        yield self.loading_indicator
+
+    def on_mount(self) -> None:
+        self.update_render = self.set_interval(
+            1 / 60, self.update_progress_bar
+        )
+
+    def update_progress_bar(self) -> None:
+        self.update(self.progress)
 
 
 class NeptunChatApp(App):
@@ -105,9 +144,10 @@ class NeptunChatApp(App):
 
         user_message = message_input.value
         user_message_box = MessageBox(role="user", text=user_message)
+
         await conversation_box.mount(user_message_box)
 
-        conversation_box.scroll_end(animate=False)
+        conversation_box.scroll_end(animate=True)
 
         logging.debug(f"User message: {user_message}")
 
@@ -116,6 +156,7 @@ class NeptunChatApp(App):
 
         try:
             result = await self.conversation.send(user_message)
+
             logging.debug(f"API response: {result}")
 
             if result:
@@ -129,7 +170,7 @@ class NeptunChatApp(App):
             logging.error("Exception details:\n" + traceback.format_exc())
 
         self.toggle_widgets(message_input, button)
-        conversation_box.scroll_end(animate=False)
+        conversation_box.scroll_end(animate=True)
 
     def action_clear(self) -> None:
         self.conversation.clear()
