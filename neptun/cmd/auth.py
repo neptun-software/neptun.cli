@@ -149,6 +149,18 @@ def status():
 
     is_authenticated = neptun_session_cookie not in [None, "None", ""]
 
+    if is_authenticated:
+        with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                transient=True,
+        ) as progress:
+            progress.add_task(description="Checking authentication status...",
+                              total=None)
+            is_authenticated = authentication_service.check_authenticated(neptun_session_cookie)
+
+            progress.stop()
+
     table = Table()
     table.add_column("Status: ", justify="left", style="green" if is_authenticated else "red", no_wrap=True)
     table.add_column("Email: ", justify="left", no_wrap=True)

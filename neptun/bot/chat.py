@@ -1,9 +1,6 @@
 import asyncio
 from neptun.model.http_requests import ChatRequest, Message
-from neptun.utils.managers import ConfigManager
-from neptun.utils.services import ChatService
 from rich.console import Console
-from rich.markdown import Markdown
 from neptun.utils.services import ChatService
 from neptun.model.http_responses import ChatMessage, ChatMessagesHttpResponse, ErrorResponse
 from neptun.utils.helpers import ChatResponseConverter

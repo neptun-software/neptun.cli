@@ -1,8 +1,6 @@
 import asyncio
-import json
 from functools import wraps
 from typing import Union
-import re
 import httpx
 from pydantic import ValidationError
 from neptun.utils.managers import ConfigManager
@@ -10,7 +8,7 @@ from neptun.model.http_requests import SignUpHttpRequest, LoginHttpRequest, Crea
 from neptun.model.http_responses import SignUpHttpResponse, GeneralErrorResponse, ErrorResponse, LoginHttpResponse, \
     ChatsHttpResponse, CreateChatHttpResponse, ChatMessagesHttpResponse
 from neptun.utils.exceptions import NotAuthenticatedError
-from neptun.utils.helpers import ChatResponseConverter, ResponseContent
+from neptun.utils.helpers import ChatResponseConverter
 
 import logging
 
@@ -55,6 +53,19 @@ class AuthenticationService:
     def __init__(self):
         self.client = httpx.Client()
         self.config_manager = ConfigManager()
+
+    def check_authenticated(self, cookie):
+        url = f"{self.config_manager.read_config('utils', 'neptun_api_server_host')}/auth/check"
+
+        with self.client:
+            self.client.cookies.set('neptun-session', cookie)
+
+            request = self.client.head(url)
+
+            if request.status_code == 204:
+                return True
+            elif request.status_code == 401:
+                return False
 
     def login(self, login_up_http_request: LoginHttpRequest) -> Union[LoginHttpResponse, ErrorResponse]:
         url = f"{self.config_manager.read_config('utils', 'neptun_api_server_host')}/auth/login"
@@ -242,4 +253,7 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    authentication_service = AuthenticationService()
+
+    is_authenticated = authentication_service.check_authenticated("Fe26.2**f60792516417ab438160034a2391ee21ef396cc52ec30bb39cf03bbafe94b6b0*kBsI65Kp1WURJ1vNgBGlXQ*eBJljqwD52UypEye17yvc_mZxO9MWyOUK-6bsjMhTd6VY4YBhsfrdUepG_jeWC0wXcOjAc1VV3Gav3daXkdmxRfpLIsqa5AvrtWI-UEBi8CHvHV9WXXYNvXUpyBqPQt3FZj9w1SzyE_CDV52_ybsQXo4KMDJ152wMm5TG2X-MixMYnRwg2hPDeALk1jOqOBXo31Ma9GOeZsqYiPxK4fPNERUImrDm5D8qTiEvVyTu2w**29ad72d75f56124b0fc63f707c2f8676079820b461d478a31bd0b644456d5a5a*qLGyVt7-8nrRv6-QJjzQiNXC4HQi9-6GSOfy-217DIQ")
+    print(is_authenticated)
