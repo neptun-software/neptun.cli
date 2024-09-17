@@ -179,9 +179,6 @@ def list_available_chats():
         if isinstance(result, ChatsHttpResponse):
             progress.stop()
             table = Table()
-            table.add_column(f"Id",
-                             justify="left",
-                             no_wrap=True)
             table.add_column(f"Name",
                              justify="left",
                              no_wrap=True)
@@ -193,7 +190,7 @@ def list_available_chats():
                              no_wrap=True)
 
             for iterator in result.chats:
-                table.add_row(f"{iterator.id}",
+                table.add_row(
                               f"{iterator.name}",
                               f"{iterator.model}",
                               f"{iterator.created_at}")
