@@ -4,13 +4,12 @@ from neptun import ERRORS
 from neptun.utils.managers import ConfigManager
 from rich.table import Table
 
-
 console = Console()
 config_manager = ConfigManager()
 
 config_app = typer.Typer(name="Configuration Manager", help="This tool allows you to manage and configure general "
-                                                          "settings for your application with ease. You can add new "
-                                                          "configurations, remove existing ones.")
+                                                            "settings for your application with ease. You can add new "
+                                                            "configurations, remove existing ones.")
 
 
 @config_app.command(name="dynamic",
@@ -79,7 +78,7 @@ def search_for_configuration_and_configure():
 
 
 @config_app.command(name="status",
-                  help="Get your current configuration-status and user-data if provided.")
+                    help="Get your current configuration-status and user-data if provided.")
 def status():
     neptun_session_cookie = config_manager.read_config('auth', 'neptun_session_cookie')
     email = config_manager.read_config('auth.user', 'email')
@@ -106,4 +105,3 @@ def status():
     )
 
     console.print(table)
-
