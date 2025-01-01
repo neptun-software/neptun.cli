@@ -1,0 +1,9 @@
+python
+typer
+pytest
+httpx
+pydantic
+configparser
+questionary
+httpx-cache
+textual

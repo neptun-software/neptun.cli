@@ -1,0 +1,24 @@
+{
+  "utils": {
+    "neptun_api_server_host": "https://neptun-webui.vercel.app/api",
+    "neptun_github_app_url": "https://github.com/apps/neptun-github-app/installations/new"
+  },
+  "auth": {
+    "neptun_session_cookie": "Fe26.2**c931a1fa6b0240aa07443ed958df8fcbf91aca5ffaed9589c1077c9439a133c2*-XpB0qYSYS3NrFOppvJn7w*OVS6vV1wrvUnrDh3gbFfNKK1Pcm4L2TGTTZoy2Ool8NKAwvYKN0JFRq6DY4Wsa9sD11vLvahFDbaxt4NbiOjteUHBwSANVoACFi-DigHivZQu3dRF4aROG4DwA6eR9Umre3FfFF4V4FkGKDn9trBx1QIRxO4qB688oe6vYE8KUIG7kCFjBp4oCTBknv-wBJOuB6UNWXVgK7XK-010NDL5wOa_-Zt9oUVjo1e4a4MngHpDwEGdIqpZbJq8TLkDJEpsasiHtSSSJqF3GRcn6hKPmTj_tmzFW5Ql0xsjT6JEqKztVo4b8aM6_z4XbXgJzHwMH9qS91XbTYApFn8z4nZpnLyvzD3vDRL2UTT8phAcNE05QMfevx1t1VgUHCj78VRK-q1HZd70XWnhXnNaq1jmA**9fbf517012f301cef0074da505bf1c9ad919548ad7c18f745774dbbaf70d1ef3*OjyEgXZCFE8Zp3llg2Pip3B6FWlxxXlXqD0CXSsN8IM",
+    "user": {
+      "id": 18,
+      "email": "8cea9a02-99f5-4d8a-92ea-7146ae24fabb@account.oAuth",
+      "oauth": {
+        "github": {
+          "github_id": "91951603",
+          "github_email": "stevanvlajic5@gmail.com"
+        }
+      }
+    }
+  },
+  "active_chat": {
+    "chat_id": -1,
+    "chat_name": "chat-1735772757317",
+    "model": "meta-llama/Meta-Llama-3-8B-Instruct"
+  }
+}

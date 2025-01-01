@@ -25,3 +25,15 @@ def install_github_app():
         typer.secho("Seems like chrome is not installed on your system.\nTo manually add the github-application, please visit: https://github.com/apps/neptun-github-app/installations", fg=typer.colors.RED)
 
 
+@github_app.command(name="installations",
+                    help="List all the repositories which have neptun added as an github-application.")
+def list_repositories():
+    github_app_url = config_manager.read_config('utils', 'neptun_github_app_url')
+    try:
+        chrome = webbrowser.get('chrome')
+        chrome.open(github_app_url)
+        console.print(f"Successfully launched chrome. You are ready to install the neptun-github-application!\nYou can find the installed application here: https://neptun-webui.vercel.app/account")
+    except webbrowser.Error:
+        typer.secho("Seems like chrome is not installed on your system.\nTo manually add the github-application, please visit: https://github.com/apps/neptun-github-app/installations", fg=typer.colors.RED)
+
+

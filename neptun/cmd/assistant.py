@@ -8,7 +8,6 @@ import questionary
 import typer
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
-
 from neptun.utils.helpers import ChatResponseConverter
 from neptun.utils.managers import ConfigManager
 from neptun.utils.services import ChatService
@@ -80,8 +79,8 @@ def create_new_chat_dialog():
         raise typer.Exit()
 
     new_chat_model = questionary.select(message="Select a ai-base-model:",
-                                        choices=["OpenAssistant/oasst-sft-4-pythia-12b-epoch-3.5",
-                                                 "mistralai/Mistral-7B-Instruct-v0.1"]).ask()
+                                        choices=["meta-llama/Meta-Llama-3-8B-Instruct",
+                                            ]).ask()
 
     if new_chat_model is None:
         raise typer.Exit()
