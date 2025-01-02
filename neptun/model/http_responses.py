@@ -43,7 +43,7 @@ class ErrorResponseData(BaseModel):
 class ErrorResponse(BaseModel):
     statusCode: int
     statusMessage: str
-    stack: List[str] = Field(default_factory=list)
+    #stack: List[str] = Field(default_factory=list)
     data: Optional[ErrorResponseData] = None
 
 
@@ -120,10 +120,28 @@ class GithubRepository(BaseModel):
     updated_at: str
     github_app_installation_id: int
 
+
 class GithubRepositoryHttpResponse(BaseModel):
     repositories: list[GithubRepository]
+
 
 class GetImportsError(BaseModel):
     statusCode: int
     statusMessage: str
     data: dict[str, str]
+
+
+class OTPResponse(BaseModel):
+    success: bool
+    message: str
+
+
+class ResetPasswordResponse(BaseModel):
+    success: bool
+    message: str
+
+
+class AuthenticationErrorResponse(BaseModel):
+    success: bool
+    message: str
+    error_code: int

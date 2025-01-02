@@ -4,10 +4,13 @@ from typing import Union
 import httpx
 from pydantic import ValidationError
 from neptun.utils.managers import ConfigManager
-from neptun.model.http_requests import SignUpHttpRequest, LoginHttpRequest, CreateChatHttpRequest, Message, ChatRequest
+from neptun.model.http_requests import SignUpHttpRequest, LoginHttpRequest, CreateChatHttpRequest, Message, ChatRequest, \
+    OTPValidateRequest, OTPCreateRequest, ResetPasswordRequest
 from neptun.model.http_responses import SignUpHttpResponse, GeneralErrorResponse, ErrorResponse, LoginHttpResponse, \
-    ChatsHttpResponse, CreateChatHttpResponse, ChatMessagesHttpResponse, GithubAppInstallation,GithubAppInstallationHttpResponse, GetInstallationsError, \
-    GithubRepositoryHttpResponse, GetImportsError, GithubRepository
+    ChatsHttpResponse, CreateChatHttpResponse, ChatMessagesHttpResponse, GithubAppInstallation, \
+    GithubAppInstallationHttpResponse, GetInstallationsError, \
+    GithubRepositoryHttpResponse, GetImportsError, GithubRepository, OTPResponse, ResetPasswordResponse, \
+    AuthenticationErrorResponse
 from neptun.utils.exceptions import NotAuthenticatedError
 from neptun.utils.helpers import ChatResponseConverter
 
@@ -53,6 +56,17 @@ class AuthenticationService:
     def __init__(self):
         self.client = httpx.Client()
         self.config_manager = ConfigManager()
+
+    def _get_session_cookie(self):
+        # Read the session cookie from the configuration
+        cookie = self.config_manager.read_config("auth", "neptun_session_cookie")
+        if not cookie:
+            raise AuthenticationErrorResponse(
+                success=False,
+                message="User is not authenticated. Please log in.",
+                error_code=401
+            )
+        return cookie
 
     def check_authenticated(self, cookie):
         url = f"{self.config_manager.read_config('utils', 'neptun_api_server_host')}/auth/check"
@@ -102,6 +116,38 @@ class AuthenticationService:
             except ValidationError:
                 return ErrorResponse.parse_obj(response_data)
 
+    def send_otp(self, email: str) -> Union[OTPResponse, ErrorResponse]:
+        cookie = self._get_session_cookie()
+        url = f"https://neptun-webui.vercel.app/auth/otp"
+        otp_request = OTPCreateRequest(email=email)
+
+        self.client.cookies.set("neptun-session", cookie)
+        response = self.client.post(url, json=otp_request.dict())
+        response_data = response.json()
+
+        try:
+            return OTPResponse.model_validate(response_data)
+        except ValidationError:
+            return ErrorResponse.model_validate(response_data)
+
+    def reset_password(self, otp: str, new_password: str) -> Union[ResetPasswordResponse, ErrorResponse]:
+        cookie = self._get_session_cookie()
+        email = self.config_manager.read_config("auth.user", "email")
+        url = f"https://neptun-webui.vercel.app/{email}/reset-password"
+        reset_password_request = ResetPasswordRequest(otp=otp, new_password=new_password)
+
+        self.client.cookies.set("neptun-session", cookie)
+        response = self.client.post(url, json=reset_password_request.dict())
+        response_data = response.json()
+
+        try:
+            self.close()
+            return ResetPasswordResponse.model_validate(response_data)
+        except ValidationError:
+            return ErrorResponse.model_validate(response_data)
+
+    def close(self):
+        self.client.close()
 
 @singleton
 class ChatService:
@@ -111,16 +157,13 @@ class ChatService:
                                    .read_config(section="auth",
                                                 key="neptun_session_cookie")})
         self.async_client = httpx.AsyncClient(
-            cookies={"neptun-session": self.config_manager
-            .read_config(section="auth",
-                         key="neptun_session_cookie")}
+            cookies={"neptun-session": self.config_manager.read_config(section="auth", key="neptun_session_cookie")}
         )
         self.chat_response_converter = ChatResponseConverter()
 
     def get_available_ai_chats(self):
         id = self.config_manager.read_config("auth.user", "id")
-        url = f"{self.config_manager.read_config('utils',
-                                                 'neptun_api_server_host')}/users/{id}/chats?order_by=updated_at:desc"
+        url = f"{self.config_manager.read_config('utils','neptun_api_server_host')}/users/{id}/chats?order_by=updated_at:desc"
 
         response = self.client.get(url)
 
@@ -135,8 +178,7 @@ class ChatService:
     def delete_selected_chat(self, chat_id):
 
         id = self.config_manager.read_config("auth.user", "id")
-        url = f"{self.config_manager.read_config('utils',
-                                                 'neptun_api_server_host')}/users/{id}/chats/{chat_id}"
+        url = f"{self.config_manager.read_config('utils','neptun_api_server_host')}/users/{id}/chats/{chat_id}"
 
         try:
             response = self.client.delete(url)

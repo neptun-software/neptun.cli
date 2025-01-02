@@ -1,6 +1,7 @@
 import typer
 from neptun.model.http_requests import SignUpHttpRequest, LoginHttpRequest
-from neptun.model.http_responses import SignUpHttpResponse, ErrorResponse, LoginHttpResponse
+from neptun.model.http_responses import SignUpHttpResponse, ErrorResponse, LoginHttpResponse, OTPResponse, \
+    ResetPasswordResponse
 from neptun.utils.services import AuthenticationService
 import re
 from secrets import compare_digest
@@ -175,4 +176,85 @@ def status():
     console.print(table)
 
 
+@auth_app.command(name="send-otp", help="Send a one-time password (OTP) to your email.")
+def send_otp():
+    email = questionary.text("Enter your email:").ask()
+
+    if not is_valid(email):
+        typer.secho(f"Invalid email format!", fg=typer.colors.RED)
+        raise typer.Exit()
+
+    neptun_session_cookie = config_manager.read_config("auth", "neptun_session_cookie")
+
+    with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            transient=True,
+    ) as progress:
+        progress.add_task(description="Sending OTP...", total=None)
+        result = authentication_service.send_otp(email=email)
+        progress.stop()
+
+        if isinstance(result, OTPResponse):
+            typer.secho(f"OTP sent successfully! Please check your email.", fg=typer.colors.GREEN)
+        elif isinstance(result, ErrorResponse):
+            typer.secho(f"Issue: {result.statusCode} - {result.statusMessage}", fg=typer.colors.RED)
+
+
+@auth_app.command(name="reset-password", help="Reset your password using an OTP.")
+def reset_password():
+    send_otp_first = questionary.confirm("Do you need to send an OTP?").ask()
+
+    if send_otp_first:
+        email = questionary.text("Enter your email:").ask()
+
+        if not is_valid(email):
+            typer.secho(f"Invalid email format!", fg=typer.colors.RED)
+            raise typer.Exit()
+
+        with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                transient=True,
+        ) as progress:
+            progress.add_task(description="Sending OTP...", total=None)
+            send_otp_result = authentication_service.send_otp(email=email)
+            progress.stop()
+
+            if isinstance(send_otp_result, OTPResponse):
+                typer.secho(f"OTP sent successfully! Please check your email.", fg=typer.colors.GREEN)
+            elif isinstance(send_otp_result, ErrorResponse):
+                typer.secho(f"Issue: {send_otp_result.statusCode} - {send_otp_result.statusMessage}",
+                            fg=typer.colors.RED)
+                raise typer.Exit()
+
+    otp = questionary.text("Enter the OTP:").ask()
+
+    if otp is None:
+        raise typer.Exit()
+
+    new_password = questionary.password("Enter a new password:").ask()
+
+    if new_password is None:
+        raise typer.Exit()
+
+    confirm_password = questionary.password("Confirm your new password:").ask()
+
+    if confirm_password != new_password:
+        typer.secho(f"Passwords do not match. Please try again.", fg=typer.colors.RED)
+        raise typer.Exit()
+
+    with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            transient=True,
+    ) as progress:
+        progress.add_task(description="Resetting password...", total=None)
+        result = authentication_service.reset_password(otp=otp, new_password=new_password)
+        progress.stop()
+
+        if isinstance(result, ResetPasswordResponse):
+            typer.secho(f"Password reset successfully!", fg=typer.colors.GREEN)
+        elif isinstance(result, ErrorResponse):
+            typer.secho(f"Issue: {result.statusCode} - {result.statusMessage}", fg=typer.colors.RED)
 
