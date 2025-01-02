@@ -1,6 +1,5 @@
 __app_name__ = "neptun"
 __version__ = "0.1.0"
-
 (
     SUCCESS,
     DIR_ERROR,
@@ -20,5 +19,4 @@ ERRORS = {
     CONFIG_KEY_NOT_FOUND_ERROR: "config key not found error",
     NO_INTERNET_CONNECTION_ERROR: "internet connection error",
     NOT_AUTHENTICATED_ERROR: "authentication error"
-
 }

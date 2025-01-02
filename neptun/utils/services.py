@@ -6,7 +6,7 @@ from pydantic import ValidationError
 from neptun.utils.managers import ConfigManager
 from neptun.model.http_requests import SignUpHttpRequest, LoginHttpRequest, CreateChatHttpRequest, Message, ChatRequest
 from neptun.model.http_responses import SignUpHttpResponse, GeneralErrorResponse, ErrorResponse, LoginHttpResponse, \
-    ChatsHttpResponse, CreateChatHttpResponse, ChatMessagesHttpResponse, ImportsHttpResponse
+    ChatsHttpResponse, CreateChatHttpResponse, ChatMessagesHttpResponse, ImportsHttpResponse, GithubAppInstallationHttpResponse
 from neptun.utils.exceptions import NotAuthenticatedError
 from neptun.utils.helpers import ChatResponseConverter
 
@@ -225,8 +225,19 @@ class GithubService:
                                    .read_config(section="auth",
                                                 key="neptun_session_cookie")})
 
-    def get_installations_by_user_id(self) -> Union[ImportsHttpResponse, ErrorResponse]:
-        pass
+    def get_installations_by_user_id(self) -> Union[GithubAppInstallationHttpResponse, GetInstallationsError]:
+        user_id = self.config_manager.read_config("auth.user", "id")
+
+        url = f"{self.config_manager.read_config('utils', 'neptun_api_server_host')}/users/{user_id}/github/installations"
+
+        response = self.client.get(url)
+        response_data = response.json()
+
+        try:
+            installations_response = [GithubAppInstallation(**installation) for installation in response_data]
+            return GithubAppInstallationHttpResponse(installations=installations_response)
+        except ValidationError:
+            return GetInstallationsError.model_validate(response_data)
 
 
 async def main():
@@ -264,8 +275,12 @@ async def main():
 
 
 if __name__ == "__main__":
-    authentication_service = AuthenticationService()
+    github_service = GithubService()
+    result = github_service.get_installations_by_user_id()
 
-    is_authenticated = authentication_service.check_authenticated(
-        "Fe26.2**f60792516417ab438160034a2391ee21ef396cc52ec30bb39cf03bbafe94b6b0*kBsI65Kp1WURJ1vNgBGlXQ*eBJljqwD52UypEye17yvc_mZxO9MWyOUK-6bsjMhTd6VY4YBhsfrdUepG_jeWC0wXcOjAc1VV3Gav3daXkdmxRfpLIsqa5AvrtWI-UEBi8CHvHV9WXXYNvXUpyBqPQt3FZj9w1SzyE_CDV52_ybsQXo4KMDJ152wMm5TG2X-MixMYnRwg2hPDeALk1jOqOBXo31Ma9GOeZsqYiPxK4fPNERUImrDm5D8qTiEvVyTu2w**29ad72d75f56124b0fc63f707c2f8676079820b461d478a31bd0b644456d5a5a*qLGyVt7-8nrRv6-QJjzQiNXC4HQi9-6GSOfy-217DIQ")
-    print(is_authenticated)
+    if isinstance(result, GithubAppInstallationHttpResponse):
+        for installation in result.installations:
+            print(f"Installation ID: {installation.id}, Account Name: {installation.github_account_name}")
+    elif isinstance(result, GetInstallationsError):
+        print(f"Error {result.statusCode}: {result.statusMessage}")
+        print(f"Details: {result.data.get('message')}")

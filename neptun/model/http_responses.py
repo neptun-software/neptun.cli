@@ -82,32 +82,19 @@ class ChatMessagesHttpResponse(BaseModel):
     chat_messages: List[ChatMessage] = Field(..., alias='chatMessages')
 
 
-class Installation(BaseModel):
-    github_repository_id: int
-    github_repository_name: str
-    github_repository_description: Optional[str] = None
-    github_repository_size: float
-    github_repository_language: Optional[str] = None
-    github_repository_license: Optional[str] = None
-    github_repository_url: str
-    github_repository_website_url: Optional[str] = None
-    github_repository_default_branch: str
-    github_repository_is_private: bool
-    github_repository_is_fork: bool
-    github_repository_is_template: bool
-    github_repository_is_archived: bool
-    github_app_installation_id: int
+class GithubAppInstallation(BaseModel):
+    id: int
+    github_account_name: str
+    github_account_type: str
+    github_account_avatar_url: str
+    created_at: datetime
+    updated_at: datetime
 
+class GithubAppInstallationHttpResponse(BaseModel):
+    installations: list[GithubAppInstallation]
 
-class Import(BaseModel):
-    pass
-
-
-class InstallationsHttpResponse(BaseModel):
-    installations: List[Installation]
-
-
-class ImportsHttpResponse(BaseModel):
-    imports: List[Import]
-
+class GetInstallationsError(BaseModel):
+    statusCode: int
+    statusMessage: str
+    data: dict[str, str]
 

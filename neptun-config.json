@@ -17,8 +17,8 @@
     }
   },
   "active_chat": {
-    "chat_id": -1,
-    "chat_name": "chat-1735772757317",
+    "chat_id": 79,
+    "chat_name": "chat-1735774978089",
     "model": "meta-llama/Meta-Llama-3-8B-Instruct"
   }
 }
