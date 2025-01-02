@@ -4,6 +4,11 @@ from rich.console import Console
 from neptun.utils.managers import ConfigManager
 from neptun.utils.services import AuthenticationService, GithubService
 from neptun.model.http_responses import GetInstallationsError, GithubAppInstallationHttpResponse
+import questionary
+import typer
+from rich.console import Console
+from rich.table import Table
+from rich.progress import Progress, SpinnerColumn, TextColumn
 
 config_manager = ConfigManager()
 console = Console()
@@ -44,8 +49,6 @@ def list_github_installations():
             table.add_column("ID", justify="left", no_wrap=True)
             table.add_column("Account Name", justify="left", no_wrap=True)
             table.add_column("Account Type", justify="left", no_wrap=True)
-            table.add_column("Created At", justify="left", no_wrap=True)
-            table.add_column("Updated At", justify="left", no_wrap=True)
 
             # Add rows for each installation
             for installation in result.installations:

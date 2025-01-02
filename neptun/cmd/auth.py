@@ -3,12 +3,12 @@ from neptun.model.http_requests import SignUpHttpRequest, LoginHttpRequest
 from neptun.model.http_responses import SignUpHttpResponse, ErrorResponse, LoginHttpResponse
 from neptun.utils.services import AuthenticationService
 import re
-import questionary
 from secrets import compare_digest
 from neptun.utils.managers import ConfigManager
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.console import Console
 from rich.table import Table
+import questionary
 
 console = Console()
 authentication_service = AuthenticationService()

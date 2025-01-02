@@ -1,5 +1,6 @@
 from typing import List, Optional
 from pydantic import BaseModel, Field
+from datetime import datetime
 
 
 class User(BaseModel):
@@ -90,6 +91,7 @@ class GithubAppInstallation(BaseModel):
     created_at: datetime
     updated_at: datetime
 
+
 class GithubAppInstallationHttpResponse(BaseModel):
     installations: list[GithubAppInstallation]
 
@@ -98,3 +100,30 @@ class GetInstallationsError(BaseModel):
     statusMessage: str
     data: dict[str, str]
 
+
+class GithubRepository(BaseModel):
+    id: int
+    github_repository_id: int
+    github_repository_name: str
+    github_repository_description: Optional[str] = None
+    github_repository_size: Optional[int] = None
+    github_repository_language: Optional[str] = None
+    github_repository_license: Optional[str] = None
+    github_repository_url: str
+    github_repository_website_url: Optional[str] = None
+    github_repository_default_branch: Optional[str] = None
+    github_repository_is_private: bool
+    github_repository_is_fork: Optional[bool] = None
+    github_repository_is_template: Optional[bool] = None
+    github_repository_is_archived: bool
+    created_at: str
+    updated_at: str
+    github_app_installation_id: int
+
+class GithubRepositoryHttpResponse(BaseModel):
+    repositories: List[GithubRepository]
+
+class GetImportsError(BaseModel):
+    statusCode: int
+    statusMessage: str
+    data: dict[str, str]
