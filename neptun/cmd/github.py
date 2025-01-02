@@ -3,7 +3,7 @@ import webbrowser
 from rich.console import Console
 from neptun.utils.managers import ConfigManager
 from neptun.utils.services import AuthenticationService, GithubService
-from neptun.model.http_responses import GetInstallationsError, GithubAppInstallationHttpResponse, GithubRepositoryHttpResponse
+from neptun.model.http_responses import GetInstallationsError, GithubAppInstallationHttpResponse, GithubRepositoryHttpResponse, GeneralErrorResponse
 import questionary
 import typer
 from rich.console import Console
@@ -76,7 +76,6 @@ def list_github_imports():
                     console.print(table)
             else:
                 typer.secho(f"No repositories found for the selected installation.", fg=typer.colors.RED)
-
         elif isinstance(result, GetInstallationsError):
             progress.stop()
             typer.secho(f"Error {result.statusCode}: {result.statusMessage}",
@@ -102,6 +101,9 @@ def list_github_imports():
                                 "To manually install the GitHub application, please visit:\n"
                                 "https://github.com/apps/neptun-github-app/installations",
                                 fg=typer.colors.RED)
+        elif isinstance(result, GeneralErrorResponse):
+            typer.secho(f"{result.statusMessage}",
+                        fg=typer.colors.RED)
         else:
             progress.stop()
             typer.secho("Unexpected error occurred while fetching GitHub installations.",

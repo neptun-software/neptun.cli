@@ -107,7 +107,8 @@ def create_new_chat_dialog():
                 typer.secho(f"Issue: {result.statusCode} - {result.statusMessage}: Email address already exists!",
                             fg=typer.colors.RED)
         elif isinstance(result, GeneralErrorResponse):
-            print(result.statusMessage)
+            typer.secho(f"{result.statusMessage}",
+                        fg=typer.colors.RED)
 
 
 def enter_available_chats_dialog():
@@ -148,7 +149,8 @@ def enter_available_chats_dialog():
                             fg=typer.colors.BRIGHT_YELLOW)
 
         elif isinstance(result, GeneralErrorResponse):
-            print(result.statusMessage)
+            typer.secho(f"{result.statusMessage}",
+                        fg=typer.colors.RED)
 
 
 def list_available_chats():
@@ -183,7 +185,9 @@ def list_available_chats():
             console.print(table)
 
         elif isinstance(result, GeneralErrorResponse):
-            print(result.statusMessage)
+            typer.secho(f"{result.statusMessage}",
+                        fg=typer.colors.RED)
+        
 
 
 def delete_selected_chat_dialog():

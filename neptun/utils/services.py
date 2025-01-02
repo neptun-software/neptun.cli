@@ -313,8 +313,33 @@ class GithubService:
         self.client = httpx.Client(cookies={"neptun-session": self.config_manager
                                    .read_config(section="auth",
                                                 key="neptun_session_cookie")})
+        self.auth_service = AuthenticationService()
+    
+    def _ensure_authenticated(self) -> Union[bool, GeneralErrorResponse]:
+        try:
+            cookie = self.auth_service._get_session_cookie()
 
-    def get_installations_by_user_id(self) -> Union[GithubAppInstallationHttpResponse, GetInstallationsError]:
+            is_authenticated = self.auth_service.check_authenticated(cookie)
+            if not is_authenticated:
+                return GeneralErrorResponse(
+                    statusCode=401,
+                    statusMessage="Session cookie is invalid. Please log in again.",
+                    data=None,
+                )
+
+            return True
+        except AuthenticationError as e:
+            return GeneralErrorResponse(
+                statusCode=401,
+                statusMessage=str(e),
+                data=None,
+            )
+
+    def get_installations_by_user_id(self) -> Union[GithubAppInstallationHttpResponse, GetInstallationsError, GeneralErrorResponse]:
+        auth_check = self._ensure_authenticated()
+        if isinstance(auth_check, GeneralErrorResponse):
+            return auth_check
+        
         user_id = self.config_manager.read_config("auth.user", "id")
 
         url = f"{self.config_manager.read_config('utils', 'neptun_api_server_host')}/users/{user_id}/installations"
@@ -328,7 +353,11 @@ class GithubService:
         except ValidationError:
             return GetInstallationsError.model_validate(response_data)
     
-    def get_repositories_for_installation(self, installation_id: int) -> Union[GithubRepositoryHttpResponse, GetImportsError]:
+    def get_repositories_for_installation(self, installation_id: int) -> Union[GithubRepositoryHttpResponse, GetImportsError, GeneralErrorResponse]:
+        auth_check = self._ensure_authenticated()
+        if isinstance(auth_check, GeneralErrorResponse):
+            return auth_check
+        
         user_id = self.config_manager.read_config("auth.user", "id")
         
         url = f"{self.config_manager.read_config('utils', 'neptun_api_server_host')}/users/{user_id}/installations/{installation_id}/imports"
