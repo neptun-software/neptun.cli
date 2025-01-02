@@ -150,3 +150,19 @@ class HealthCheckResponse(BaseModel):
     status: str
     timestamp: str
     uptime: float
+
+
+class ChatFile(BaseModel):
+    id: int
+    chat_conversation_id: int
+    chat_conversation_message_id: int
+    neptun_user_id: int
+    title: str
+    text: str
+    language: str = "text"
+    extension: str = "txt"
+    created_at: datetime
+    updated_at: datetime
+
+class GetChatFilesResponse(BaseModel):
+    chatFiles: List[ChatFile]

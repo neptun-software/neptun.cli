@@ -11,7 +11,7 @@ from neptun.model.http_responses import SignUpHttpResponse, GeneralErrorResponse
     ChatsHttpResponse, CreateChatHttpResponse, ChatMessagesHttpResponse, GithubAppInstallation, \
     GithubAppInstallationHttpResponse, GetInstallationsError, \
     GithubRepositoryHttpResponse, GetImportsError, GithubRepository, OTPResponse, ResetPasswordResponse, \
-    AuthenticationErrorResponse, HealthCheckResponse
+    AuthenticationErrorResponse, HealthCheckResponse, GetChatFilesResponse
 from neptun.utils.exceptions import NotAuthenticatedError
 from neptun.utils.helpers import ChatResponseConverter
 import logging
@@ -324,7 +324,41 @@ class ChatService:
         except Exception as e:
             logging.error(f"An error occurred: {e}")
         return None
+    
+    def get_chat_files(self) -> Union[GetChatFilesResponse, GeneralErrorResponse]:
+        auth_check = self._ensure_authenticated()
+        if isinstance(auth_check, GeneralErrorResponse):
+            return auth_check
 
+        user_id = self.config_manager.read_config("auth.user", "id")
+        chat_id = self.config_manager.read_config("active_chat", "chat_id")
+        url = f"{self.config_manager.read_config('utils', 'neptun_api_server_host')}/users/{user_id}/chats/{chat_id}/files"
+
+        try:
+            response = self.client.get(url)
+
+            if response.status_code == 200: 
+                return GetChatFilesResponse(**response.json())
+            else:
+                return GeneralErrorResponse(
+                    statusCode=response.status_code,
+                    statusMessage=response.reason_phrase,
+                    data=response.json(),
+                )
+        except ValidationError as ve:
+            return GeneralErrorResponse(
+                statusCode=500,
+                statusMessage="Validation Error",
+                data={"details": str(ve)},
+            )
+        except Exception as e:
+            return GeneralErrorResponse(
+                statusCode=500,
+                statusMessage="An unexpected error occurred",
+                data={"details": str(e)},
+            )
+
+    
 
 def parse_response(response: str) -> str:
     lines = response.splitlines()

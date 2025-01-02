@@ -288,7 +288,27 @@ def ask(question: str):
         console.print(f"Bot: {response}")
 '''
 
+@assistant_app.command(name="fetch-files", help="Fetch and display chat-related files.")
+def fetch_chat_files_cli():
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        transient=True,
+    ) as progress:
+        task = progress.add_task(description="Fetching chat files...", total=None)
 
+        result = chat_service.get_chat_files()
 
+        progress.stop()
+        if isinstance(result, ChatsHttpResponse):
+            table = Table(title="Chat Files")
+            table.add_column("Name", justify="left", no_wrap=True)
+            table.add_column("Path", justify="left", no_wrap=True)
 
+            for chat_file in result.chat_files:
+                table.add_row(chat_file.name, chat_file.path)
+
+            console.print(table)
+        elif isinstance(result, GeneralErrorResponse):
+            typer.secho(f"Error: {result.statusMessage}", fg=typer.colors.RED)
 
