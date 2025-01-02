@@ -47,3 +47,11 @@ class NoInternetConnectionError(BaseAppError):
 class NotAuthenticatedError(BaseAppError):
     def __init__(self):
         super().__init__(NO_INTERNET_CONNECTION_ERROR)
+
+
+class AuthenticationError(BaseException):
+    def __init__(self, success: bool, message: str, error_code: int):
+        self.success = success
+        self.message = message
+        self.error_code = error_code
+        super().__init__(message)

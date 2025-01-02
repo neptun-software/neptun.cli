@@ -2,6 +2,7 @@ import typer
 from neptun.model.http_requests import SignUpHttpRequest, LoginHttpRequest
 from neptun.model.http_responses import SignUpHttpResponse, ErrorResponse, LoginHttpResponse, OTPResponse, \
     ResetPasswordResponse
+from neptun.utils.exceptions import AuthenticationError
 from neptun.utils.services import AuthenticationService
 import re
 from secrets import compare_digest
@@ -184,8 +185,6 @@ def send_otp():
         typer.secho(f"Invalid email format!", fg=typer.colors.RED)
         raise typer.Exit()
 
-    neptun_session_cookie = config_manager.read_config("auth", "neptun_session_cookie")
-
     with Progress(
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),
@@ -199,6 +198,9 @@ def send_otp():
             typer.secho(f"OTP sent successfully! Please check your email.", fg=typer.colors.GREEN)
         elif isinstance(result, ErrorResponse):
             typer.secho(f"Issue: {result.statusCode} - {result.statusMessage}", fg=typer.colors.RED)
+        elif isinstance(result, AuthenticationError):
+            typer.secho(f"{result.message}", fg=typer.colors.RED)
+            raise typer.Exit()
 
 
 @auth_app.command(name="reset-password", help="Reset your password using an OTP.")
@@ -226,6 +228,9 @@ def reset_password():
             elif isinstance(send_otp_result, ErrorResponse):
                 typer.secho(f"Issue: {send_otp_result.statusCode} - {send_otp_result.statusMessage}",
                             fg=typer.colors.RED)
+                raise typer.Exit()
+            elif isinstance(send_otp_result, AuthenticationError):
+                typer.secho(f"{send_otp_result.message}", fg=typer.colors.RED)
                 raise typer.Exit()
 
     otp = questionary.text("Enter the OTP:").ask()
@@ -257,4 +262,7 @@ def reset_password():
             typer.secho(f"Password reset successfully!", fg=typer.colors.GREEN)
         elif isinstance(result, ErrorResponse):
             typer.secho(f"Issue: {result.statusCode} - {result.statusMessage}", fg=typer.colors.RED)
+        elif isinstance(result, AuthenticationError):
+            typer.secho(f"{result.message}", fg=typer.colors.RED)
+            raise typer.Exit()
 

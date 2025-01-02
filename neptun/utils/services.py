@@ -3,6 +3,7 @@ from functools import wraps
 from typing import Union
 import httpx
 from pydantic import ValidationError
+from neptun.utils.exceptions import AuthenticationError
 from neptun.utils.managers import ConfigManager
 from neptun.model.http_requests import SignUpHttpRequest, LoginHttpRequest, CreateChatHttpRequest, Message, ChatRequest, \
     OTPValidateRequest, OTPCreateRequest, ResetPasswordRequest
@@ -58,10 +59,9 @@ class AuthenticationService:
         self.config_manager = ConfigManager()
 
     def _get_session_cookie(self):
-        # Read the session cookie from the configuration
         cookie = self.config_manager.read_config("auth", "neptun_session_cookie")
         if not cookie:
-            raise AuthenticationErrorResponse(
+            raise AuthenticationError(
                 success=False,
                 message="User is not authenticated. Please log in.",
                 error_code=401
@@ -116,8 +116,13 @@ class AuthenticationService:
             except ValidationError:
                 return ErrorResponse.parse_obj(response_data)
 
-    def send_otp(self, email: str) -> Union[OTPResponse, ErrorResponse]:
-        cookie = self._get_session_cookie()
+    def send_otp(self, email: str) \
+            -> Union[OTPResponse, ErrorResponse, AuthenticationError]:
+        try:
+            cookie = self._get_session_cookie()
+        except AuthenticationError as e:
+            return AuthenticationError(success=False, message=str(e), error_code=e.error_code)
+
         url = f"https://neptun-webui.vercel.app/auth/otp"
         otp_request = OTPCreateRequest(email=email)
 
@@ -130,8 +135,13 @@ class AuthenticationService:
         except ValidationError:
             return ErrorResponse.model_validate(response_data)
 
-    def reset_password(self, otp: str, new_password: str) -> Union[ResetPasswordResponse, ErrorResponse]:
-        cookie = self._get_session_cookie()
+    def reset_password(self, otp: str, new_password: str) \
+            -> Union[ResetPasswordResponse, ErrorResponse, AuthenticationError]:
+        try:
+            cookie = self._get_session_cookie()
+        except AuthenticationError as e:
+            return AuthenticationError(success=False, message=str(e), error_code=e.error_code)
+
         email = self.config_manager.read_config("auth.user", "email")
         url = f"https://neptun-webui.vercel.app/{email}/reset-password"
         reset_password_request = ResetPasswordRequest(otp=otp, new_password=new_password)
@@ -148,6 +158,7 @@ class AuthenticationService:
 
     def close(self):
         self.client.close()
+
 
 @singleton
 class ChatService:
