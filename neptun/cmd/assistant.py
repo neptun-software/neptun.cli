@@ -25,21 +25,6 @@ bot = NeptunChatApp()
 chat_service = ChatService()
 config_manager = ConfigManager()
 
-
-def ensure_authenticated(method):
-    @wraps(method)
-    def wrapper(*args, **kwargs):
-        id = config_manager.read_config(section='auth.user', key='id')
-        neptun_session_token = config_manager.read_config(section='auth', key='neptun_session_cookie')
-
-        if neptun_session_token is None or id is None:
-            raise
-
-        return method(*args, **kwargs)
-
-    return wrapper
-
-
 # will automatically start a chat based on the config-files latest id
 @assistant_app.callback(invoke_without_command=True)
 def main(ctx: typer.Context):
@@ -121,6 +106,8 @@ def create_new_chat_dialog():
             else:
                 typer.secho(f"Issue: {result.statusCode} - {result.statusMessage}: Email address already exists!",
                             fg=typer.colors.RED)
+        elif isinstance(result, GeneralErrorResponse):
+            print(result.statusMessage)
 
 
 def enter_available_chats_dialog():

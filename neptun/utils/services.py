@@ -14,7 +14,6 @@ from neptun.model.http_responses import SignUpHttpResponse, GeneralErrorResponse
     AuthenticationErrorResponse
 from neptun.utils.exceptions import NotAuthenticatedError
 from neptun.utils.helpers import ChatResponseConverter
-
 import logging
 
 logging.basicConfig(
@@ -40,11 +39,12 @@ def singleton(cls):
 def ensure_authenticated(method):
     @wraps(method)
     def wrapper(self, *args, **kwargs):
-        id = self.config_manager.read_config(section='auth.user', key='id')
-        neptun_session_token = self.config_manager.read_config(section='auth', key='neptun_session_cookie')
+        id = self.config_manager.read_config(section="auth.user", key="id")
+        neptun_session_token = self.config_manager.read_config(section="auth", key="neptun_session_cookie")
 
+        # Pass the exception into kwargs if authentication fails
         if neptun_session_token is None or id is None:
-            raise NotAuthenticatedError()
+            kwargs["authentication_error"] = AuthenticationError(message="Not authenticated")
 
         return method(self, *args, **kwargs)
 
@@ -171,8 +171,34 @@ class ChatService:
             cookies={"neptun-session": self.config_manager.read_config(section="auth", key="neptun_session_cookie")}
         )
         self.chat_response_converter = ChatResponseConverter()
+        self.auth_service = AuthenticationService()
+    
+    def _ensure_authenticated(self) -> Union[bool, GeneralErrorResponse]:
+        try:
+            cookie = self.auth_service._get_session_cookie()
 
-    def get_available_ai_chats(self):
+            is_authenticated = self.auth_service.check_authenticated(cookie)
+            if not is_authenticated:
+                return GeneralErrorResponse(
+                    statusCode=401,
+                    statusMessage="Session cookie is invalid. Please log in again.",
+                    data=None,
+                )
+
+            return True
+        except AuthenticationError as e:
+            return GeneralErrorResponse(
+                statusCode=401,
+                statusMessage=str(e),
+                data=None,
+            )
+
+    def get_available_ai_chats(self) -> Union[ChatsHttpResponse, GeneralErrorResponse]:
+
+        auth_check = self._ensure_authenticated()
+        if isinstance(auth_check, GeneralErrorResponse):
+            return auth_check
+        
         id = self.config_manager.read_config("auth.user", "id")
         url = f"{self.config_manager.read_config('utils','neptun_api_server_host')}/users/{id}/chats?order_by=updated_at:desc"
 
@@ -186,7 +212,11 @@ class ChatService:
         except ValidationError:
             return GeneralErrorResponse.model_validate(response_data)
 
-    def delete_selected_chat(self, chat_id):
+    def delete_selected_chat(self, chat_id) -> Union[ChatsHttpResponse, GeneralErrorResponse]:
+
+        auth_check = self._ensure_authenticated()
+        if isinstance(auth_check, GeneralErrorResponse):
+            return auth_check
 
         id = self.config_manager.read_config("auth.user", "id")
         url = f"{self.config_manager.read_config('utils','neptun_api_server_host')}/users/{id}/chats/{chat_id}"
@@ -198,7 +228,12 @@ class ChatService:
             return False
 
     def create_chat(self, create_chat_http_request: CreateChatHttpRequest) \
-            -> Union[CreateChatHttpResponse, ErrorResponse]:
+            -> Union[CreateChatHttpResponse, ErrorResponse, GeneralErrorResponse]:
+        
+        auth_check = self._ensure_authenticated()
+        if isinstance(auth_check, GeneralErrorResponse):
+            return auth_check
+        
         id = self.config_manager.read_config("auth.user", "id")
         url = f"{self.config_manager.read_config('utils', 'neptun_api_server_host')}/users/{id}/chats"
 
