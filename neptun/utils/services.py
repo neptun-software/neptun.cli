@@ -6,7 +6,8 @@ from pydantic import ValidationError
 from neptun.utils.managers import ConfigManager
 from neptun.model.http_requests import SignUpHttpRequest, LoginHttpRequest, CreateChatHttpRequest, Message, ChatRequest
 from neptun.model.http_responses import SignUpHttpResponse, GeneralErrorResponse, ErrorResponse, LoginHttpResponse, \
-    ChatsHttpResponse, CreateChatHttpResponse, ChatMessagesHttpResponse, GithubAppInstallation,GithubAppInstallationHttpResponse, GetInstallationsError
+    ChatsHttpResponse, CreateChatHttpResponse, ChatMessagesHttpResponse, GithubAppInstallation,GithubAppInstallationHttpResponse, GetInstallationsError, \
+    GithubRepositoryHttpResponse, GetImportsError, GithubRepository
 from neptun.utils.exceptions import NotAuthenticatedError
 from neptun.utils.helpers import ChatResponseConverter
 
@@ -239,6 +240,24 @@ class GithubService:
         except ValidationError:
             return GetInstallationsError.model_validate(response_data)
     
+    def get_repositories_for_installation(self, installation_id: int) -> Union[GithubRepositoryHttpResponse, GetImportsError]:
+        user_id = self.config_manager.read_config("auth.user", "id")
+        
+        url = f"{self.config_manager.read_config('utils', 'neptun_api_server_host')}/users/{user_id}/installations/{installation_id}/imports"
+
+        response = self.client.get(url)
+        response_data = response.json()
+
+        try:
+            if isinstance(response_data, list):
+                repositories_response = [GithubRepository(**repo) for repo in response_data]
+                return GithubRepositoryHttpResponse(repositories=repositories_response)
+
+            return GetImportsError.model_validate(response_data)
+        except ValidationError as e:
+            logging.error(f"Validation error while parsing response: {e}")
+            raise
+        
 
 async def main():
     url = "https://example.com/api"  # Replace with your actual URL

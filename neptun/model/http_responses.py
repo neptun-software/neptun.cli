@@ -121,7 +121,7 @@ class GithubRepository(BaseModel):
     github_app_installation_id: int
 
 class GithubRepositoryHttpResponse(BaseModel):
-    repositories: List[GithubRepository]
+    repositories: list[GithubRepository]
 
 class GetImportsError(BaseModel):
     statusCode: int

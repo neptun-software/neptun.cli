@@ -3,7 +3,7 @@ import webbrowser
 from rich.console import Console
 from neptun.utils.managers import ConfigManager
 from neptun.utils.services import AuthenticationService, GithubService
-from neptun.model.http_responses import GetInstallationsError, GithubAppInstallationHttpResponse
+from neptun.model.http_responses import GetInstallationsError, GithubAppInstallationHttpResponse, GithubRepositoryHttpResponse
 import questionary
 import typer
 from rich.console import Console
@@ -31,33 +31,52 @@ def install_github_app():
         typer.secho("Seems like chrome is not installed on your system.\nTo manually add the github-application, please visit: https://github.com/apps/neptun-github-app/installations", fg=typer.colors.RED)
 
 
-@github_app.command(name="installations", help="List all GitHub app installations")
-def list_github_installations():
+@github_app.command(name="list-imports", help="List all imports for the selected GitHub app installation.")
+def list_github_imports():
     with Progress(
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),
             transient=True,
     ) as progress:
-        progress.add_task(description="Collecting GitHub app installations...",
-                          total=None)
+        progress.add_task(description="Collecting GitHub app installations...", total=None)
 
         result = github_service.get_installations_by_user_id()
 
         if isinstance(result, GithubAppInstallationHttpResponse):
             progress.stop()
-            table = Table()
-            table.add_column("ID", justify="left", no_wrap=True)
-            table.add_column("Account Name", justify="left", no_wrap=True)
-            table.add_column("Account Type", justify="left", no_wrap=True)
+            installation_dict = {f"{installation.id}: {installation.github_account_name}": installation for installation in result.installations}
+            installation_choices = [f"{installation.id}: {installation.github_account_name}" for installation in result.installations]
 
-            # Add rows for each installation
-            for installation in result.installations:
-                table.add_row(
-                    f"{installation.id}",
-                    f"{installation.github_account_name}",
-                    f"{installation.github_account_type}"
-                )
-            console.print(table)
+            if result.installations and len(result.installations) > 0:
+                action = questionary.select(
+                    message="Select an installation:",
+                    choices=installation_choices
+                ).ask()
+
+                if action is None:
+                    raise typer.Exit()
+
+                selected_installation = installation_dict.get(action)
+
+                progress.add_task(description="Fetching repositories...", total=None)
+                repositories_response = github_service.get_repositories_for_installation(selected_installation.id)
+               
+                if repositories_response.repositories:
+                    table = Table()
+                    table.add_column("Name", justify="left", no_wrap=True)
+                    table.add_column("Description", justify="left", no_wrap=True)
+
+                    # Loop through each repository and add data to the table
+                    for repo in repositories_response.repositories:
+                        table.add_row(
+                            repo.github_repository_name,
+                            repo.github_repository_description or "No description"
+                        )
+
+                    console.print(table)
+            else:
+                typer.secho(f"No repositories found for the selected installation.", fg=typer.colors.RED)
+
         elif isinstance(result, GetInstallationsError):
             progress.stop()
             typer.secho(f"Error {result.statusCode}: {result.statusMessage}",
@@ -87,3 +106,6 @@ def list_github_installations():
             progress.stop()
             typer.secho("Unexpected error occurred while fetching GitHub installations.",
                         fg=typer.colors.RED)
+
+
+            
