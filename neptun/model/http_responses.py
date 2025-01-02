@@ -145,3 +145,8 @@ class AuthenticationErrorResponse(BaseModel):
     success: bool
     message: str
     error_code: int
+
+class HealthCheckResponse(BaseModel):
+    status: str
+    timestamp: str
+    uptime: float

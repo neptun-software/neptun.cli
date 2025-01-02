@@ -2,10 +2,13 @@ from rich.console import Console
 import typer
 from neptun import ERRORS
 from neptun.utils.managers import ConfigManager
+from neptun.utils.services import ApplicationService
+from neptun.model.http_responses import HealthCheckResponse
 from rich.table import Table
 
 console = Console()
 config_manager = ConfigManager()
+application_service = ApplicationService()
 
 config_app = typer.Typer(name="Configuration Manager", help="This tool allows you to manage and configure general "
                                                             "settings for your application with ease. You can add new "
@@ -105,3 +108,18 @@ def status():
     )
 
     console.print(table)
+
+
+@config_app.command(name="health", help="Check the health status of the Neptun server.")
+def check_health():
+    application_service = ApplicationService()
+    health_status = application_service.check_health()
+
+    if isinstance(health_status, HealthCheckResponse):
+        console.print("[bold green]Server Health Status: Healthy[/bold green]")
+        console.print(f"[bold]Timestamp:[/bold] {health_status.timestamp}")
+        console.print(f"[bold]Uptime:[/bold] {health_status.uptime:.2f} seconds")
+    else:
+        console.print("[bold red]Failed to fetch server health status[/bold red]")
+        console.print(f"[bold]Error Code:[/bold] {health_status.statusCode}")
+        console.print(f"[bold]Error Message:[/bold] {health_status.statusMessage}")

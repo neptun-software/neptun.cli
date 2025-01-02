@@ -11,7 +11,7 @@ from neptun.model.http_responses import SignUpHttpResponse, GeneralErrorResponse
     ChatsHttpResponse, CreateChatHttpResponse, ChatMessagesHttpResponse, GithubAppInstallation, \
     GithubAppInstallationHttpResponse, GetInstallationsError, \
     GithubRepositoryHttpResponse, GetImportsError, GithubRepository, OTPResponse, ResetPasswordResponse, \
-    AuthenticationErrorResponse
+    AuthenticationErrorResponse, HealthCheckResponse
 from neptun.utils.exceptions import NotAuthenticatedError
 from neptun.utils.helpers import ChatResponseConverter
 import logging
@@ -52,8 +52,40 @@ def ensure_authenticated(method):
 
 
 @singleton
-class AuthenticationService:
+class ApplicationService:
+    def __init__(self):
+        self.client = httpx.Client()
+        self.config_manager = ConfigManager()
 
+    def check_health(self) -> Union[HealthCheckResponse, GeneralErrorResponse]:
+        url = f"{self.config_manager.read_config('utils', 'neptun_api_server_host').removesuffix("/api")}/health"
+        try:
+            response = self.client.get(url)
+            if response.status_code == 200:
+                return HealthCheckResponse(**response.json())
+            else:
+                return GeneralErrorResponse(
+                    statusCode=response.status_code,
+                    statusMessage="Server returned an error",
+                    data=response.json(),
+                )
+        except httpx.RequestError as e:
+            return GeneralErrorResponse(
+                statusCode=500,
+                statusMessage=f"Request failed: {str(e)}",
+                data=None,
+            )
+        except Exception as e:
+            return GeneralErrorResponse(
+                statusCode=500,
+                statusMessage=f"Unexpected error occurred: {str(e)}",
+                data=None,
+            )
+        
+
+
+@singleton
+class AuthenticationService:
     def __init__(self):
         self.client = httpx.Client()
         self.config_manager = ConfigManager()
@@ -123,7 +155,7 @@ class AuthenticationService:
         except AuthenticationError as e:
             return AuthenticationError(success=False, message=str(e), error_code=e.error_code)
 
-        url = f"https://neptun-webui.vercel.app/auth/otp"
+        url = f"{self.config_manager.read_config('utils', 'neptun_api_server_host').removesuffix("/api")}/auth/otp"
         otp_request = OTPCreateRequest(email=email)
 
         self.client.cookies.set("neptun-session", cookie)
@@ -143,7 +175,7 @@ class AuthenticationService:
             return AuthenticationError(success=False, message=str(e), error_code=e.error_code)
 
         email = self.config_manager.read_config("auth.user", "email")
-        url = f"https://neptun-webui.vercel.app/{email}/reset-password"
+        url = f"{self.config_manager.read_config('utils', 'neptun_api_server_host').removesuffix("/api")}/{email}/reset-password"
         reset_password_request = ResetPasswordRequest(otp=otp, new_password=new_password)
 
         self.client.cookies.set("neptun-session", cookie)
