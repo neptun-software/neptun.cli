@@ -6,12 +6,13 @@ from pydantic import ValidationError
 from neptun.utils.exceptions import AuthenticationError
 from neptun.utils.managers import ConfigManager
 from neptun.model.http_requests import SignUpHttpRequest, LoginHttpRequest, CreateChatHttpRequest, Message, ChatRequest, \
-    OTPValidateRequest, OTPCreateRequest, ResetPasswordRequest
+    OTPValidateRequest, OTPCreateRequest, ResetPasswordRequest, CreateCollectionRequest
 from neptun.model.http_responses import SignUpHttpResponse, GeneralErrorResponse, ErrorResponse, LoginHttpResponse, \
     ChatsHttpResponse, CreateChatHttpResponse, ChatMessagesHttpResponse, GithubAppInstallation, \
     GithubAppInstallationHttpResponse, GetInstallationsError, \
     GithubRepositoryHttpResponse, GetImportsError, GithubRepository, OTPResponse, ResetPasswordResponse, \
-    AuthenticationErrorResponse, HealthCheckResponse, GetChatFilesResponse
+    AuthenticationErrorResponse, HealthCheckResponse, GetChatFilesResponse, TemplateCollectionResponse, \
+    TemplateCollection
 from neptun.utils.exceptions import NotAuthenticatedError
 from neptun.utils.helpers import ChatResponseConverter
 import logging
@@ -358,7 +359,6 @@ class ChatService:
                 data={"details": str(e)},
             )
 
-    
 
 def parse_response(response: str) -> str:
     lines = response.splitlines()
@@ -440,40 +440,98 @@ class GithubService:
         except ValidationError as e:
             logging.error(f"Validation error while parsing response: {e}")
             raise
-        
 
-async def main():
-    url = "https://example.com/api"  # Replace with your actual URL
 
-    chat_service = ChatService()
+@singleton
+class TemplateService:
+    def __init__(self):
+        self.config_manager = ConfigManager()
+        self.client = httpx.Client(cookies={"neptun-session": self.config_manager
+                                   .read_config(section="auth",
+                                                key="neptun_session_cookie")})
+        self.auth_service = AuthenticationService()
 
-    # Create a message
-    message = Message(role="user", content="Generate me fizzbuzz in java!")
+    def _ensure_authenticated(self) -> Union[bool, GeneralErrorResponse]:
+        try:
+            cookie = self.auth_service._get_session_cookie()
 
-    message_list = [message]
+            is_authenticated = self.auth_service.check_authenticated(cookie)
+            if not is_authenticated:
+                return GeneralErrorResponse(
+                    statusCode=401,
+                    statusMessage="Session cookie is invalid. Please log in again.",
+                    data=None,
+                )
 
-    messages = ChatRequest(messages=message_list)
+            return True
+        except AuthenticationError as e:
+            return GeneralErrorResponse(
+                statusCode=401,
+                statusMessage=str(e),
+                data=None,
+            )
 
-    try:
-        result = await chat_service.post_chat_message(messages)
+    def create_template_collection(self, create_collection_request: CreateCollectionRequest) -> Union[TemplateCollectionResponse, GeneralErrorResponse]:
+        authenticated = self._ensure_authenticated()
+        if isinstance(authenticated, GeneralErrorResponse):
+            return authenticated
 
-        print(result)
+        user_id = int(self.config_manager.read_config("auth.user", "id"))
 
-        '''
-            chat_converter = ChatResponseConverter(message=result)
-    
-            for section in chat_converter.extract_sections():
-                if isinstance(section, ResponseContent):
-                    if section.type == "markdown":
-                        print(f'```\n{section.content}\n```')
-                    elif section.type == "text":
-                        print(f'```\n{section.content}\n```')
-                else:
-                    print("Unexpected section type:", type(section))
-        '''
+        create_collection_request.neptun_user_id = user_id
 
-    except NotAuthenticatedError:
-        print("Not authenticated!")
+        url = f"{self.config_manager.read_config('utils', 'neptun_api_server_host')}/users/{user_id}/collections"
+
+        response = self.client.post(
+            url,
+            json=create_collection_request.dict(),
+        )
+
+        if response.status_code == 200:
+            response_data = response.json()
+            collection = TemplateCollection(**response_data['collection'])
+            return TemplateCollectionResponse(collections=[collection])
+        else:
+            return GeneralErrorResponse(
+                statusCode=response.status_code,
+                statusMessage=response.text,
+                data=None,
+            )
+
+    def get_user_template_collections(self) -> Union[TemplateCollectionResponse, GeneralErrorResponse]:
+        authenticated = self._ensure_authenticated()
+        if isinstance(authenticated, GeneralErrorResponse):
+            return authenticated
+
+        user_id = int(self.config_manager.read_config("auth.user", "id"))
+        url = f"{self.config_manager.read_config('utils', 'neptun_api_server_host')}/users/{user_id}/collections"
+
+        try:
+            response = self.client.get(
+                url
+            )
+            if response.status_code == 200:
+                response_data = response.json()
+                collections = [TemplateCollection(**collection) for collection in response_data["collections"]]
+                return TemplateCollectionResponse(collections=collections)
+            elif response.status_code == 403:
+                return GeneralErrorResponse(
+                    statusCode=403,
+                    statusMessage="Forbidden. User ID mismatch or insufficient permissions.",
+                    data=None,
+                )
+            else:
+                return GeneralErrorResponse(
+                    statusCode=response.status_code,
+                    statusMessage=response.text,
+                    data=None,
+                )
+        except httpx.RequestError as e:
+            return GeneralErrorResponse(
+                statusCode=500,
+                statusMessage=f"Server error: {str(e)}",
+                data=None,
+            )
 
 
 if __name__ == "__main__":

@@ -1,7 +1,8 @@
 import json
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel, Field, RootModel
 import httpx
+from datetime import datetime
 
 
 class SignUpHttpRequest(BaseModel):
@@ -44,7 +45,19 @@ class OTPValidateRequest(BaseModel):
     otp: str
     new_password: str
 
+class Template(BaseModel):
+    id: int
+    description: Optional[str]
+    file_name: str
+    created_at: datetime
+    updated_at: datetime
+    neptun_user_id: int
+    template_collection_id: Optional[int]
+    user_file_id: Optional[int]
 
 
-
-
+class CreateCollectionRequest(BaseModel):
+    name: str
+    description: Optional[str]
+    is_shared: bool
+    neptun_user_id: Optional[int]

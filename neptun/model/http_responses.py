@@ -164,5 +164,33 @@ class ChatFile(BaseModel):
     created_at: datetime
     updated_at: datetime
 
+
 class GetChatFilesResponse(BaseModel):
     chatFiles: List[ChatFile]
+
+
+class Template(BaseModel):
+    id: int
+    description: Optional[str]
+    file_name: str
+    created_at: datetime
+    updated_at: datetime
+    neptun_user_id: int
+    template_collection_id: Optional[int]
+    user_file_id: Optional[int]
+
+
+class TemplateCollection(BaseModel):
+    id: int
+    name: str
+    description: Optional[str] = None
+    is_shared: bool
+    share_uuid: str
+    created_at: str
+    updated_at: str
+    neptun_user_id: Optional[int] = -1
+    templates: Optional[List] = None
+
+
+class TemplateCollectionResponse(BaseModel):
+    collections: list[TemplateCollection]
