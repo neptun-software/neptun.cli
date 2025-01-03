@@ -45,6 +45,7 @@ class OTPValidateRequest(BaseModel):
     otp: str
     new_password: str
 
+
 class Template(BaseModel):
     id: int
     description: Optional[str]

@@ -104,7 +104,6 @@ def list_template_collections(limit: int = None, select_last: bool = False):
         table.add_column("Description", justify="left", no_wrap=True)
         table.add_column("Shared", justify="center", style="green", no_wrap=True)
 
-        # Select collections to display, considering the `limit` and `select_last` parameters
         if select_last:
             collections_to_display = collections_response.collections[-limit:] if limit else collections_response.collections[-1:]
         else:
@@ -122,7 +121,47 @@ def list_template_collections(limit: int = None, select_last: bool = False):
 
 
 @template_app.command(name="delete-collection", help="Delete a template collection.")
-def delete_template_collection():
-    pass
+def delete_template_collection(limit: int = None, select_last: bool = False):
+    questionary.text(message="")
+    with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            transient=True,
+    ) as progress:
+        collecting_data_task = progress.add_task(description="Collecting available collections...", total=None)
+
+        result = template_service.get_user_template_collections()
+        collection_dict = {f"{collection.id}: {collection.name}": collection for collection in result.collections}
+
+        if select_last:
+            collection_choices = [f"{collection.id}: {collection.name}" for collection in (result.collections[:-limit] if limit else result.collections[-1:])]
+        else:
+            collection_choices = [f"{collection.id}: {collection.name}" for collection in (result.collections[:limit] if limit else result.collections)]
+
+        if isinstance(result, TemplateCollectionResponse):
+            progress.update(collecting_data_task, completed=True, visible=False)
+
+            if result.collections and len(result.collections) > 0:
+                action = questionary.select(
+                    message="Select a template collection to delete:",
+                    choices=collection_choices,
+                ).ask()
+
+                if action is None:
+                    raise typer.Exit()
+
+                selected_collection_object = collection_dict.get(action)
+
+                deleting_data_task = progress.add_task(description="Deleting selected collection...", total=None)
+
+                deleted_collection = template_service.delete_template_collection(selected_collection_object.share_uuid)
+                if deleted_collection is True:
+                    progress.update(deleting_data_task, completed=True, visible=False)
+                    progress.stop()
+                    typer.secho(f"Successfully deleted collection: {selected_collection_object.name}.", fg=typer.colors.GREEN)
+                else:
+                    typer.secho(f"Failed to delete collection: {selected_collection_object.name}.", fg=typer.colors.RED)
+            else:
+                typer.secho(f"No collections available!", fg=typer.colors.BRIGHT_YELLOW)
 
 

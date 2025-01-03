@@ -25,6 +25,7 @@ bot = NeptunChatApp()
 chat_service = ChatService()
 config_manager = ConfigManager()
 
+
 # will automatically start a chat based on the config-files latest id
 @assistant_app.callback(invoke_without_command=True)
 def main(ctx: typer.Context):
@@ -187,7 +188,6 @@ def list_available_chats():
         elif isinstance(result, GeneralErrorResponse):
             typer.secho(f"{result.statusMessage}",
                         fg=typer.colors.RED)
-        
 
 
 def delete_selected_chat_dialog():

@@ -82,7 +82,6 @@ class ApplicationService:
                 statusMessage=f"Unexpected error occurred: {str(e)}",
                 data=None,
             )
-        
 
 
 @singleton
@@ -104,15 +103,14 @@ class AuthenticationService:
     def check_authenticated(self, cookie):
         url = f"{self.config_manager.read_config('utils', 'neptun_api_server_host')}/auth/check"
 
-        with self.client:
-            self.client.cookies.set('neptun-session', cookie)
+        self.client.cookies.set('neptun-session', cookie)
 
-            request = self.client.head(url)
+        request = self.client.head(url)
 
-            if request.status_code == 204:
-                return True
-            elif request.status_code == 401:
-                return False
+        if request.status_code == 204:
+            return True
+        elif request.status_code == 401:
+            return False
 
     def login(self, login_up_http_request: LoginHttpRequest) -> Union[LoginHttpResponse, ErrorResponse]:
         url = f"{self.config_manager.read_config('utils', 'neptun_api_server_host')}/auth/login"
@@ -246,7 +244,6 @@ class ChatService:
             return GeneralErrorResponse.model_validate(response_data)
 
     def delete_selected_chat(self, chat_id) -> Union[ChatsHttpResponse, GeneralErrorResponse]:
-
         auth_check = self._ensure_authenticated()
         if isinstance(auth_check, GeneralErrorResponse):
             return auth_check
@@ -451,6 +448,9 @@ class TemplateService:
                                                 key="neptun_session_cookie")})
         self.auth_service = AuthenticationService()
 
+    def close(self):
+        self.client.close()
+
     def _ensure_authenticated(self) -> Union[bool, GeneralErrorResponse]:
         try:
             cookie = self.auth_service._get_session_cookie()
@@ -532,6 +532,37 @@ class TemplateService:
                 statusMessage=f"Server error: {str(e)}",
                 data=None,
             )
+
+    def delete_template_collection(self, collection_uuid: str) -> Union[bool, GeneralErrorResponse]:
+        authenticated = self._ensure_authenticated()
+        if isinstance(authenticated, GeneralErrorResponse):
+            return authenticated
+
+        user_id = int(self.config_manager.read_config("auth.user", "id"))
+        url = f"{self.config_manager.read_config('utils', 'neptun_api_server_host')}/users/{user_id}/collections/{collection_uuid}"
+
+        try:
+            response = self.client.delete(url)
+            response.raise_for_status()
+
+            if response.status_code == 200:
+                return True
+            elif response.status_code == 404:
+                return GeneralErrorResponse(statusCode=404, statusMessage="Collection not found", data=None)
+            else:
+                return GeneralErrorResponse(
+                    statusCode=response.status_code,
+                    statusMessage=f"Failed to delete collection: {response.text}",
+                    data=None,
+                )
+        except httpx.RequestError as e:
+            return GeneralErrorResponse(
+                statusCode=500,
+                statusMessage=f"Server error: {str(e)}",
+                data=None,
+            )
+        finally:
+            self.auth_service.close()
 
 
 if __name__ == "__main__":
