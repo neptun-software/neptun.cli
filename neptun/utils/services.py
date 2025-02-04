@@ -440,7 +440,7 @@ class GithubService:
 
 
 @singleton
-class TemplateService:
+class CollectionService:
     def __init__(self):
         self.config_manager = ConfigManager()
         self.client = httpx.Client(cookies={"neptun-session": self.config_manager

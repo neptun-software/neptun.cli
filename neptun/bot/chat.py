@@ -7,6 +7,8 @@ from neptun.utils.helpers import ChatResponseConverter
 
 import logging
 
+# implement chatgpt chat only
+
 logging.basicConfig(
     filename='app.log',  # Name of the log file
     filemode='a',  # Mode to open the file ('w' for overwrite, 'a' for append)

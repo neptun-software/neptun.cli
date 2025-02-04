@@ -4,7 +4,7 @@
     "neptun_github_app_url": "https://github.com/apps/neptun-github-app/installations/new"
   },
   "auth": {
-    "neptun_session_cookie": "Fe26.2**c931a1fa6b0240aa07443ed958df8fcbf91aca5ffaed9589c1077c9439a133c2*-XpB0qYSYS3NrFOppvJn7w*OVS6vV1wrvUnrDh3gbFfNKK1Pcm4L2TGTTZoy2Ool8NKAwvYKN0JFRq6DY4Wsa9sD11vLvahFDbaxt4NbiOjteUHBwSANVoACFi-DigHivZQu3dRF4aROG4DwA6eR9Umre3FfFF4V4FkGKDn9trBx1QIRxO4qB688oe6vYE8KUIG7kCFjBp4oCTBknv-wBJOuB6UNWXVgK7XK-010NDL5wOa_-Zt9oUVjo1e4a4MngHpDwEGdIqpZbJq8TLkDJEpsasiHtSSSJqF3GRcn6hKPmTj_tmzFW5Ql0xsjT6JEqKztVo4b8aM6_z4XbXgJzHwMH9qS91XbTYApFn8z4nZpnLyvzD3vDRL2UTT8phAcNE05QMfevx1t1VgUHCj78VRK-q1HZd70XWnhXnNaq1jmA**9fbf517012f301cef0074da505bf1c9ad919548ad7c18f745774dbbaf70d1ef3*OjyEgXZCFE8Zp3llg2Pip3B6FWlxxXlXqD0CXSsN8IM",
+    "neptun_session_cookie": "Fe26.2**d78c6834b5666ada7b76c6c4cc8f88364774df386f48b065b89d1712e0e6e8ce*KY1Zh8aoyX9dkUlMfoiYsg*pWeBbDqdb9z6VOeHPOTzfvOKhOskWuxeF7i3lJg9anoElcHIc24n5J8auQzwPhdzrSkKPxBraB_04lFruSKmz0X5DoDnz1NiPRdalsdJA6nlNKJYdmAJAYE-REHlKLgqli-47NrUo-2v2OBd9bDxhGP8GWZKmMHEBWJ2eqEc0di8-2CoQfw-JmHi5maVoJggvRsbzJ6O7VNPuEYMxejQB2aVRSJiA3XjjeWWEVectg9F2NDUOqqy5JqAqceBQk1maDeFcUMLpBFQfkPIkHkacE8Lkaox6oNW0GuW3zKEMa_rhLihUbNpF3a8L-p8dZrHCCjn7532hxz6cwSxZSCGXn25UfWxURFC-FSjgVsZVm5qneS1qmE9S3W1qLuogyjiYPjnpGvWj4Inds-xWjhi2w**ecb51b5bd889ad1e670e09143d6c5b272e33972cb6ee18e2c1fd7723b636b772*9iHlU0L70qz2ppS5KnrmYFMS2HXHHwvlqJaOO4zM24E",
     "user": {
       "id": 18,
       "email": "8cea9a02-99f5-4d8a-92ea-7146ae24fabb@account.oAuth",
@@ -17,8 +17,8 @@
     }
   },
   "active_chat": {
-    "chat_id": 79,
-    "chat_name": "chat-1735774978089",
-    "model": "meta-llama/Meta-Llama-3-8B-Instruct"
+    "chat_id": -1,
+    "chat_name": "chat-1738711966362",
+    "model": "google/gemma-2-27b-it"
   }
 }

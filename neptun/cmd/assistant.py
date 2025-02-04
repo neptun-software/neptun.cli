@@ -65,7 +65,8 @@ def create_new_chat_dialog():
         raise typer.Exit()
 
     new_chat_model = questionary.select(message="Select a ai-base-model:",
-                                        choices=["meta-llama/Meta-Llama-3-8B-Instruct",
+                                        choices=[
+                                            "gpt-3.5-turbo",
                                             ]).ask()
 
     if new_chat_model is None:
@@ -277,16 +278,16 @@ def delete_chat():
 def create_chat():
     create_new_chat_dialog()
 
-'''
+
 @assistant_app.command(name="ask", help="Ask a question to the bot")
 def ask(question: str):
     response = bot.respond(question)
     if response.startswith("markdown:"):
         markdown_content = response[len("markdown:"):].strip()
-        print_markdown_stream(markdown_content)
+        #print_markdown_stream(markdown_content)
     else:
         console.print(f"Bot: {response}")
-'''
+
 
 @assistant_app.command(name="fetch-files", help="Fetch and display chat-related files.")
 def fetch_chat_files_cli():
