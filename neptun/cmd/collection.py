@@ -6,7 +6,8 @@ import questionary
 from rich.console import Console
 from rich.table import Table
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from neptun.model.http_requests import CreateCollectionRequest, UserFile, CreateTemplateRequest, TemplateData
+from neptun.model.http_requests import CreateCollectionRequest, UserFile, CreateTemplateRequest, TemplateData, \
+    UpdateCollectionRequest
 from neptun.utils.services import CollectionService, TemplateService
 from neptun.utils.managers import ConfigManager
 from rich.progress import Progress, SpinnerColumn, TextColumn
@@ -34,7 +35,7 @@ EXT_TO_LANG = {
     '.json': 'JSON',
     '.yaml': 'YAML',
     '.txt': 'Text',
-    '.md': 'Markdown',
+    '.md': 'Markdown'
 }
 
 
@@ -189,6 +190,92 @@ def delete_template_collection(limit: int = None, select_last: bool = False):
                     typer.secho(f"Failed to delete collection: {selected_collection_object.name}.", fg=typer.colors.RED)
             else:
                 typer.secho(f"No collections available!", fg=typer.colors.BRIGHT_YELLOW)
+
+
+@collection_app.command(name="update", help="Update a template collection.")
+def update_template_collection(limit: int = None, select_last: bool = False):
+    with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            transient=True,
+    ) as progress:
+        collecting_data_task = progress.add_task(description="Collecting available collections...", total=None)
+
+        result = collection_service.get_user_template_collections()
+
+        if isinstance(result, GeneralErrorResponse):
+            typer.secho(f"Error fetching collections: {result.statusMessage}", fg=typer.colors.RED)
+            return
+
+        collection_dict = {f"{collection.id}: {collection.name}": collection for collection in result.collections}
+
+        if select_last:
+            collection_choices = [f"{collection.id}: {collection.name}" for collection in
+                                  (result.collections[-limit:] if limit else result.collections[-1:])]
+        else:
+            collection_choices = [f"{collection.id}: {collection.name}" for collection in
+                                  (result.collections[:limit] if limit else result.collections)]
+
+        progress.update(collecting_data_task, completed=True, visible=False)
+        progress.stop()
+
+        if not result.collections:
+            typer.secho("No collections available!", fg=typer.colors.BRIGHT_YELLOW)
+            return
+
+        action = questionary.select(
+            message="Select a template collection to update:",
+            choices=collection_choices,
+        ).ask()
+
+        selected_collection_object = collection_dict.get(action)
+
+        should_update_name = questionary.select(
+            "Would you like to update the name?",
+            choices=["Yes", "No"]
+        ).ask()
+
+        name = questionary.text(
+            "Update name of the template collection:").ask() if should_update_name == "Yes" else selected_collection_object.name
+
+        should_update_description = questionary.select(
+            "Would you like to update the description?",
+            choices=["Yes", "No"]
+        ).ask()
+
+        description = questionary.text(
+            "Update description of the template collection:").ask() if should_update_description == "Yes" else selected_collection_object.description
+
+        should_update_shared = questionary.select(
+            "Would you like to update the share-status?",
+            choices=["Yes", "No"]
+        ).ask()
+
+        is_shared = selected_collection_object.is_shared
+        if should_update_shared == "Yes":
+            share_status = questionary.select(
+                "Should this collection be shared?",
+                choices=["Yes", "No"]
+            ).ask()
+            is_shared = True if share_status == "Yes" else False
+
+        update_collection_request = UpdateCollectionRequest(
+            name=name,
+            description=description,
+            is_shared=is_shared,
+            neptun_user_id=selected_collection_object.neptun_user_id
+        )
+
+        typer.secho(f"Updating collection: {name}...", fg=typer.colors.BRIGHT_BLACK)
+
+        response = collection_service.update_template_collection(
+            collection_uuid=selected_collection_object.share_uuid,
+            update_request=update_collection_request)
+
+        if isinstance(response, GeneralErrorResponse):
+            typer.secho(f"Failed to update collection: {response.statusMessage}", fg=typer.colors.RED)
+        else:
+            typer.secho(f"Successfully updated collection: {name}.", fg=typer.colors.GREEN)
 
 
 @collection_app.command(name="inspect", help="Inspect the information about a template collection.")

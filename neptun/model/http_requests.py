@@ -81,3 +81,10 @@ class CreateCollectionRequest(BaseModel):
     description: Optional[str]
     is_shared: bool
     neptun_user_id: Optional[int]
+
+
+class UpdateCollectionRequest(BaseModel):
+    name: Optional[str]
+    description: Optional[str]
+    is_shared: Optional[bool]
+    neptun_user_id: int

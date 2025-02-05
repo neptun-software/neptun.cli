@@ -6,7 +6,8 @@ from pydantic import ValidationError
 from neptun.utils.exceptions import AuthenticationError
 from neptun.utils.managers import ConfigManager
 from neptun.model.http_requests import SignUpHttpRequest, LoginHttpRequest, CreateChatHttpRequest, ChatRequest, \
-    OTPCreateRequest, ResetPasswordRequest, CreateCollectionRequest, CreateTemplateRequest, Template
+    OTPCreateRequest, ResetPasswordRequest, CreateCollectionRequest, CreateTemplateRequest, Template, \
+    UpdateCollectionRequest
 from neptun.model.http_responses import SignUpHttpResponse, GeneralErrorResponse, ErrorResponse, LoginHttpResponse, \
     ChatsHttpResponse, CreateChatHttpResponse, ChatMessagesHttpResponse, GithubAppInstallation, \
     GithubAppInstallationHttpResponse, GetInstallationsError, \
@@ -204,7 +205,7 @@ class ChatService:
         )
         self.chat_response_converter = ChatResponseConverter()
         self.auth_service = AuthenticationService()
-    
+
     def _ensure_authenticated(self) -> Union[bool, GeneralErrorResponse]:
         try:
             cookie = self.auth_service._get_session_cookie()
@@ -228,7 +229,7 @@ class ChatService:
         auth_check = self._ensure_authenticated()
         if isinstance(auth_check, GeneralErrorResponse):
             return auth_check
-        
+
         id = self.config_manager.read_config("auth.user", "id")
         url = f"{self.config_manager.read_config('utils', 'neptun_api_server_host')}/users/{id}/chats?order_by=updated_at:desc"
 
@@ -253,7 +254,8 @@ class ChatService:
         response = self.client.delete(url)
 
         if response.status_code != 200:
-            return GeneralErrorResponse(statusCode=response.status_code, statusMessage="Error occurred while deleting the selected chat.")
+            return GeneralErrorResponse(statusCode=response.status_code,
+                                        statusMessage="Error occurred while deleting the selected chat.")
 
     def create_chat(self, create_chat_http_request: CreateChatHttpRequest) \
             -> Union[CreateChatHttpResponse, ErrorResponse, GeneralErrorResponse]:
@@ -345,7 +347,7 @@ class ChatService:
         except Exception as e:
             logging.error(f"An error occurred: {e}")
         return None
-    
+
     def get_chat_files(self) -> Union[GetChatFilesResponse, GeneralErrorResponse]:
         auth_check = self._ensure_authenticated()
         if isinstance(auth_check, GeneralErrorResponse):
@@ -358,7 +360,7 @@ class ChatService:
         try:
             response = self.client.get(url)
 
-            if response.status_code == 200: 
+            if response.status_code == 200:
                 return GetChatFilesResponse(**response.json())
             else:
                 return GeneralErrorResponse(
@@ -398,7 +400,7 @@ class GithubService:
                                    .read_config(section="auth",
                                                 key="neptun_session_cookie")})
         self.auth_service = AuthenticationService()
-    
+
     def _ensure_authenticated(self) -> Union[bool, GeneralErrorResponse]:
         try:
             cookie = self.auth_service._get_session_cookie()
@@ -417,11 +419,12 @@ class GithubService:
                 statusMessage=str(e),
             )
 
-    def get_installations_by_user_id(self) -> Union[GithubAppInstallationHttpResponse, GetInstallationsError, GeneralErrorResponse]:
+    def get_installations_by_user_id(self) -> Union[
+        GithubAppInstallationHttpResponse, GetInstallationsError, GeneralErrorResponse]:
         auth_check = self._ensure_authenticated()
         if isinstance(auth_check, GeneralErrorResponse):
             return auth_check
-        
+
         user_id = self.config_manager.read_config("auth.user", "id")
 
         url = f"{self.config_manager.read_config('utils', 'neptun_api_server_host')}/users/{user_id}/installations"
@@ -434,14 +437,15 @@ class GithubService:
             return GithubAppInstallationHttpResponse(installations=installations_response)
         except ValidationError:
             return GetInstallationsError.model_validate(response_data)
-    
-    def get_repositories_for_installation(self, installation_id: int) -> Union[GithubRepositoryHttpResponse, GetImportsError, GeneralErrorResponse]:
+
+    def get_repositories_for_installation(self, installation_id: int) -> Union[
+        GithubRepositoryHttpResponse, GetImportsError, GeneralErrorResponse]:
         auth_check = self._ensure_authenticated()
         if isinstance(auth_check, GeneralErrorResponse):
             return auth_check
-        
+
         user_id = self.config_manager.read_config("auth.user", "id")
-        
+
         url = f"{self.config_manager.read_config('utils', 'neptun_api_server_host')}/users/{user_id}/installations/{installation_id}/imports"
 
         response = self.client.get(url)
@@ -488,7 +492,8 @@ class TemplateService:
                 statusMessage=str(e),
             )
 
-    def create_template(self, collection_uuid: str, create_template_request: CreateTemplateRequest) -> Union[Template, ErrorResponse]:
+    def create_template(self, collection_uuid: str, create_template_request: CreateTemplateRequest) -> Union[
+        Template, ErrorResponse]:
         authenticated = self._ensure_authenticated()
         if isinstance(authenticated, GeneralErrorResponse):
             return authenticated
@@ -650,7 +655,7 @@ class CollectionService:
             if response.status_code == 200:
                 return True
             elif response.status_code == 404:
-                return GeneralErrorResponse(statusCode=404, statusMessage="Collection not found", data=None)
+                return GeneralErrorResponse(statusCode=404, statusMessage="Collection not found")
             else:
                 return GeneralErrorResponse(
                     statusCode=response.status_code,
@@ -663,6 +668,45 @@ class CollectionService:
             )
         finally:
             self.auth_service.close()
+
+    def update_template_collection(self, collection_uuid: str, update_request: UpdateCollectionRequest) -> Union[TemplateCollectionResponse, GeneralErrorResponse]:
+        authenticated = self._ensure_authenticated()
+        if isinstance(authenticated, GeneralErrorResponse):
+            return authenticated
+
+        user_id = int(self.config_manager.read_config("auth.user", "id"))
+        url = f"{self.config_manager.read_config('utils', 'neptun_api_server_host')}/users/{user_id}/collections/{collection_uuid}"
+
+        try:
+            response = self.client.patch(
+                url,
+                json=update_request.dict(),
+            )
+
+            if response.status_code == 200:
+                response_data = response.json()
+                updated_collection = TemplateCollection(**response_data['collection'])
+                return TemplateCollectionResponse(collections=[updated_collection])
+            elif response.status_code == 404:
+                return GeneralErrorResponse(
+                    statusCode=404,
+                    statusMessage="Collection not found",
+                )
+            elif response.status_code == 403:
+                return GeneralErrorResponse(
+                    statusCode=403,
+                    statusMessage="Forbidden. User ID mismatch or insufficient permissions.",
+                )
+            else:
+                return GeneralErrorResponse(
+                    statusCode=response.status_code,
+                    statusMessage=response.text,
+                )
+        except httpx.RequestError as e:
+            return GeneralErrorResponse(
+                statusCode=500,
+                statusMessage=f"Server error: {str(e)}",
+            )
 
 
 if __name__ == "__main__":
