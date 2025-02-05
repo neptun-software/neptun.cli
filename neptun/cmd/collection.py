@@ -42,7 +42,10 @@ EXT_TO_LANG = {
 def options():
     choice = questionary.select(
         "Choose an available function:",
-        choices=["Create Collection()", "List Collections()", "Delete Collection()"],
+        choices=["Create Collection()",
+                 "List Collections()",
+                 "Delete Collection()",
+                 "Update Collection()"],
     ).ask()
 
     match choice:
@@ -54,6 +57,8 @@ def options():
             delete_template_collection()
         case "Inspect Collection()":
             inspect_template_collection()
+        case "Update Collection()":
+            update_template_collection()
 
 
 @collection_app.command(name="options", help="List all template options available.")
@@ -157,12 +162,12 @@ def delete_template_collection(limit: int = None, select_last: bool = False):
         collecting_data_task = progress.add_task(description="Collecting available collections...", total=None)
 
         result = collection_service.get_user_template_collections()
-        collection_dict = {f"{collection.id}: {collection.name}": collection for collection in result.collections}
+        collection_dict = {f"{collection.name}": collection for collection in result.collections}
 
         if select_last:
-            collection_choices = [f"{collection.id}: {collection.name}" for collection in (result.collections[:-limit] if limit else result.collections[-1:])]
+            collection_choices = [f"{collection.name}" for collection in (result.collections[:-limit] if limit else result.collections[-1:])]
         else:
-            collection_choices = [f"{collection.id}: {collection.name}" for collection in (result.collections[:limit] if limit else result.collections)]
+            collection_choices = [f"{collection.name}" for collection in (result.collections[:limit] if limit else result.collections)]
 
         if isinstance(result, TemplateCollectionResponse):
             progress.update(collecting_data_task, completed=True, visible=False)
@@ -207,13 +212,13 @@ def update_template_collection(limit: int = None, select_last: bool = False):
             typer.secho(f"Error fetching collections: {result.statusMessage}", fg=typer.colors.RED)
             return
 
-        collection_dict = {f"{collection.id}: {collection.name}": collection for collection in result.collections}
+        collection_dict = {f"{collection.name}": collection for collection in result.collections}
 
         if select_last:
-            collection_choices = [f"{collection.id}: {collection.name}" for collection in
+            collection_choices = [f"{collection.name}" for collection in
                                   (result.collections[-limit:] if limit else result.collections[-1:])]
         else:
-            collection_choices = [f"{collection.id}: {collection.name}" for collection in
+            collection_choices = [f"{collection.name}" for collection in
                                   (result.collections[:limit] if limit else result.collections)]
 
         progress.update(collecting_data_task, completed=True, visible=False)
