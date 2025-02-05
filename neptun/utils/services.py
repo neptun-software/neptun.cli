@@ -6,7 +6,7 @@ from pydantic import ValidationError
 from neptun.utils.exceptions import AuthenticationError
 from neptun.utils.managers import ConfigManager
 from neptun.model.http_requests import SignUpHttpRequest, LoginHttpRequest, CreateChatHttpRequest, Message, ChatRequest, \
-    OTPValidateRequest, OTPCreateRequest, ResetPasswordRequest, CreateCollectionRequest
+    OTPValidateRequest, OTPCreateRequest, ResetPasswordRequest, CreateCollectionRequest, CreateTemplateRequest, Template
 from neptun.model.http_responses import SignUpHttpResponse, GeneralErrorResponse, ErrorResponse, LoginHttpResponse, \
     ChatsHttpResponse, CreateChatHttpResponse, ChatMessagesHttpResponse, GithubAppInstallation, \
     GithubAppInstallationHttpResponse, GetInstallationsError, \
@@ -116,7 +116,7 @@ class AuthenticationService:
         url = f"{self.config_manager.read_config('utils', 'neptun_api_server_host')}/auth/login"
 
         with self.client:
-            response = self.client.post(url, data=login_up_http_request.dict())
+            response = self.client.post(url, data=login_up_http_request.model_dump())
 
             response_data = response.json()
 
@@ -134,7 +134,7 @@ class AuthenticationService:
         url = f"{self.config_manager.read_config('utils', 'neptun_api_server_host')}/auth/sign-up"
 
         with self.client:
-            response = self.client.post(url, data=sign_up_http_request.dict())
+            response = self.client.post(url, data=sign_up_http_request.model_dump())
 
             response_data = response.json()
 
@@ -158,7 +158,7 @@ class AuthenticationService:
         otp_request = OTPCreateRequest(email=email)
 
         self.client.cookies.set("neptun-session", cookie)
-        response = self.client.post(url, json=otp_request.dict())
+        response = self.client.post(url, json=otp_request.model_dump())
         response_data = response.json()
 
         try:
@@ -178,7 +178,7 @@ class AuthenticationService:
         reset_password_request = ResetPasswordRequest(otp=otp, new_password=new_password)
 
         self.client.cookies.set("neptun-session", cookie)
-        response = self.client.post(url, json=reset_password_request.dict())
+        response = self.client.post(url, json=reset_password_request.model_dump())
         response_data = response.json()
 
         try:
@@ -266,7 +266,7 @@ class ChatService:
         id = self.config_manager.read_config("auth.user", "id")
         url = f"{self.config_manager.read_config('utils', 'neptun_api_server_host')}/users/{id}/chats"
 
-        response = self.client.post(url, data=create_chat_http_request.dict())
+        response = self.client.post(url, data=create_chat_http_request.model_dump())
 
         response_data = response.json()
 
@@ -308,7 +308,7 @@ class ChatService:
             url = f"{self.config_manager.read_config('utils', 'neptun_api_server_host')}/ai/huggingface/{model_publisher}/{model_name}/chat?chat_id={chat_id}"
             logging.debug(f"Constructed URL: {url}")
 
-            response = await self.async_client.post(url, json=messages.dict())
+            response = await self.async_client.post(url, json=messages.model_dump())
 
             logging.debug(f"Response received: {response.text}")
 
@@ -470,9 +470,28 @@ class TemplateService:
                 data=None,
             )
 
-    def create_template(self):
+    def create_template(self, collection_uuid: str, create_template_request: CreateTemplateRequest, session_cookie: str) -> Union[Template, ErrorResponse]:
+        authenticated = self._ensure_authenticated()
+        if isinstance(authenticated, GeneralErrorResponse):
+            return authenticated
 
+        user_id = int(self.config_manager.read_config("auth.user", "id"))
+        url = f"{self.config_manager.read_config('utils', 'neptun_api_server_host')}/users/{user_id}/collections/{collection_uuid}/templates"
 
+        with self.client:
+            response = self.client.post(url, data=create_template_request.model_dump())
+
+            response_data = response.json()
+
+            try:
+                session_cookie = None if not response.cookies.get("neptun-session") else response.cookies.get(
+                    "neptun-session")
+                login_response = LoginHttpResponse.parse_obj(response_data)
+
+                login_response.session_cookie = session_cookie
+                return login_response
+            except ValidationError:
+                return ErrorResponse.parse_obj(response_data)
 
 
 @singleton
@@ -520,7 +539,7 @@ class CollectionService:
 
         response = self.client.post(
             url,
-            json=create_collection_request.dict(),
+            json=create_collection_request.model_dump(),
         )
 
         if response.status_code == 200:

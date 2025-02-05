@@ -146,6 +146,7 @@ class AuthenticationErrorResponse(BaseModel):
     message: str
     error_code: int
 
+
 class HealthCheckResponse(BaseModel):
     status: str
     timestamp: str
