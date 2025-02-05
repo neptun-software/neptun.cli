@@ -47,7 +47,7 @@ def options():
     match choice:
         case "Create Collection()":
             create_template_collection()
-        case "List Collections()":
+        case "List Collection()":
             list_template_collections()
         case "Delete Collection()":
             delete_template_collection()
@@ -187,6 +187,54 @@ def delete_template_collection(limit: int = None, select_last: bool = False):
                     typer.secho(f"Successfully deleted collection: {selected_collection_object.name}.", fg=typer.colors.GREEN)
                 else:
                     typer.secho(f"Failed to delete collection: {selected_collection_object.name}.", fg=typer.colors.RED)
+            else:
+                typer.secho(f"No collections available!", fg=typer.colors.BRIGHT_YELLOW)
+
+
+@collection_app.command(name="inspect", help="Inspect the information about a template collection.")
+def inspect_template_collection(limit: int = None, select_last: bool = False):
+    with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            transient=True,
+    ) as progress:
+        collecting_data_task = progress.add_task(description="Collecting available collections...", total=None)
+
+        result = collection_service.get_user_template_collections()
+        collection_dict = {f"{collection.id}: {collection.name}": collection for collection in result.collections}
+
+        if select_last:
+            collection_choices = [f"{collection.id}: {collection.name}" for collection in
+                                  (result.collections[:-limit] if limit else result.collections[-1:])]
+        else:
+            collection_choices = [f"{collection.id}: {collection.name}" for collection in
+                                  (result.collections[:limit] if limit else result.collections)]
+
+        if isinstance(result, TemplateCollectionResponse):
+            progress.update(collecting_data_task, completed=True, visible=False)
+            progress.stop()
+
+            if result.collections and len(result.collections) > 0:
+                action = questionary.select(
+                    message="Select a template collection to inspect:",
+                    choices=collection_choices,
+                ).ask()
+
+                if action is None:
+                    raise typer.Exit()
+                selected_collection_object = collection_dict.get(action)
+                table = Table()
+                table.add_column("Attribute", justify="left", no_wrap=True)
+                table.add_column("Value", justify="left", no_wrap=True)
+
+                table.add_row("ID", str(selected_collection_object.id))
+                table.add_row("Name", selected_collection_object.name)
+                table.add_row("Description", selected_collection_object.description if selected_collection_object.description else '/')
+                table.add_row("Share UUID", selected_collection_object.share_uuid)
+                table.add_row("Is Shared", "Yes" if selected_collection_object.is_shared else "No")
+
+                console.print(table)
+
             else:
                 typer.secho(f"No collections available!", fg=typer.colors.BRIGHT_YELLOW)
 
