@@ -1,21 +1,40 @@
 import os
+from typing import List, Tuple
 
 import typer
 import questionary
 from rich.console import Console
 from rich.table import Table
-from neptun.model.http_requests import CreateCollectionRequest
-from neptun.utils.services import CollectionService
+from neptun.model.http_requests import CreateCollectionRequest, UserFile, CreateTemplateRequest, TemplateData
+from neptun.utils.services import CollectionService, TemplateService
 from neptun.utils.managers import ConfigManager
 from rich.progress import Progress, SpinnerColumn, TextColumn
-from neptun.model.http_responses import TemplateCollectionResponse,GeneralErrorResponse
+from neptun.model.http_responses import TemplateCollectionResponse, GeneralErrorResponse, Template
 
 collection_app = typer.Typer(name="Collection Manager",
                              help="Manage your neptun collections.")
 
 collection_service = CollectionService()
+template_service = TemplateService()
 config_manager = ConfigManager()
 console = Console()
+
+EXT_TO_LANG = {
+    '.py': 'Python',
+    '.js': 'JavaScript',
+    '.cpp': 'C++',
+    '.java': 'Java',
+    '.html': 'HTML',
+    '.css': 'CSS',
+    '.rb': 'Ruby',
+    '.php': 'PHP',
+    '.go': 'Go',
+    '.sh': 'Shell Script',
+    '.json': 'JSON',
+    '.yaml': 'YAML',
+    '.txt': 'Text',
+    '.md': 'Markdown',
+}
 
 
 def options():
@@ -169,6 +188,32 @@ def delete_template_collection(limit: int = None, select_last: bool = False):
                 typer.secho(f"No collections available!", fg=typer.colors.BRIGHT_YELLOW)
 
 
+def get_readable_files_in_directory(directory: str, neptun_user_id: int) -> List[UserFile]:
+    readable_files = []
+
+    for file_name in os.listdir(directory):
+
+        if file_name == "app.log":
+            continue
+        file_path = os.path.join(directory, file_name)
+        if os.path.isfile(file_path):
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                file_name_without_extension, file_extension = os.path.splitext(file_name)
+
+                readable_files.append(UserFile(
+                    title=file_name_without_extension,
+                    text=content,
+                    language=EXT_TO_LANG.get(file_extension.lower(), 'Unknown'),  # Todo: Should be optimized... a bit messy. But for now ok :)
+                    extension=file_extension,
+                    neptun_user_id=neptun_user_id
+                ))
+            except (UnicodeDecodeError, IOError):
+                continue
+    return readable_files
+
+
 @collection_app.command(name="create", help="Automatically create a new collection with all the files inside your current directory.")
 def auto_create_template_collection(directory: str = typer.Argument(".", help="Directory for the collection")):
     if directory == ".":
@@ -177,5 +222,86 @@ def auto_create_template_collection(directory: str = typer.Argument(".", help="D
     current_directory = os.path.basename(directory)
     typer.secho(f"{current_directory}", fg=typer.colors.GREEN)
 
+    is_basename = questionary.select(
+        f"Would you like to customize the collection's name? ({current_directory})",
+        choices=["Yes", "No"]
+    ).ask()
+
+    name = questionary.text("Name of the template collection:").ask() if is_basename == "Yes" else current_directory
+
+    is_shared = questionary.select(
+        "Should this collection be shared?",
+        choices=["Yes", "No"]
+    ).ask()
+
+    description = questionary.text("Description for the collection (optional):").ask()
+
+    create_collection_request = CreateCollectionRequest(
+        name=name,
+        description=description if description else '',
+        is_shared=True if is_shared == "Yes" else False,
+        neptun_user_id=int(config_manager.read_config('auth.user', 'id'))
+    )
+    with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            transient=True,
+    ) as progress:
+        task = progress.add_task(description="Creating template collection...", total=None)
+
+        result = collection_service.create_template_collection(create_collection_request)
+
+        progress.stop()
+
+        if isinstance(result, TemplateCollectionResponse):
+            typer.secho(f"Template collection '{create_collection_request.name}' created successfully!",
+                        fg=typer.colors.GREEN)
+
+            latest_collection = result.collections[-1]
+            table = Table()
+            table.add_column("Attribute", justify="left", no_wrap=True)
+            table.add_column("Value", justify="left", no_wrap=True)
+
+            table.add_row("ID", str(latest_collection.id))
+            table.add_row("Name", latest_collection.name)
+            table.add_row("Description", latest_collection.description if latest_collection.description else '/')
+            table.add_row("Share UUID", latest_collection.share_uuid)
+            table.add_row("Is Shared", "Yes" if latest_collection.is_shared else "No")
+
+            console.print(table)
+
+            typer.secho(f"Reading files from {current_directory}...", fg=typer.colors.BRIGHT_BLACK)
+
+            readable_files = get_readable_files_in_directory(directory, int(config_manager.read_config('auth.user', 'id')))
+
+            for readable_file in readable_files:
+                typer.secho(readable_file.title, fg=typer.colors.GREEN)
+
+                create_template_data = TemplateData(
+                    description="No description",
+                    file_name=f"{readable_file.title}.{readable_file.extension}",
+                    neptun_user_id=int(config_manager.read_config('auth.user', 'id'))
+                )
+
+                create_template_request = CreateTemplateRequest(
+                    template=create_template_data,
+                    file=readable_file
+                )
+
+                create_template_result = template_service.create_template(
+                    collection_uuid=latest_collection.share_uuid,
+                    create_template_request=create_template_request,
+                )
+
+                if isinstance(create_template_result, Template):
+                    typer.secho(f"Template '{create_template_result.file_name}' created successfully!",
+                                fg=typer.colors.GREEN)
+                elif isinstance(create_template_result, GeneralErrorResponse):
+                    typer.secho(
+                        f"Error: {create_template_result.statusMessage} (Status Code: {create_template_result.statusCode})",
+                        fg=typer.colors.RED)
+
+        elif isinstance(result, GeneralErrorResponse):
+            typer.echo(f"Error: {result.statusMessage} (Status Code: {result.statusCode})")
 
 

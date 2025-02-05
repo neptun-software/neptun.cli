@@ -5,8 +5,8 @@ import httpx
 from pydantic import ValidationError
 from neptun.utils.exceptions import AuthenticationError
 from neptun.utils.managers import ConfigManager
-from neptun.model.http_requests import SignUpHttpRequest, LoginHttpRequest, CreateChatHttpRequest, Message, ChatRequest, \
-    OTPValidateRequest, OTPCreateRequest, ResetPasswordRequest, CreateCollectionRequest, CreateTemplateRequest, Template
+from neptun.model.http_requests import SignUpHttpRequest, LoginHttpRequest, CreateChatHttpRequest, ChatRequest, \
+    OTPCreateRequest, ResetPasswordRequest, CreateCollectionRequest, CreateTemplateRequest, Template
 from neptun.model.http_responses import SignUpHttpResponse, GeneralErrorResponse, ErrorResponse, LoginHttpResponse, \
     ChatsHttpResponse, CreateChatHttpResponse, ChatMessagesHttpResponse, GithubAppInstallation, \
     GithubAppInstallationHttpResponse, GetInstallationsError, \
@@ -68,19 +68,16 @@ class ApplicationService:
                 return GeneralErrorResponse(
                     statusCode=response.status_code,
                     statusMessage="Server returned an error",
-                    data=response.json(),
                 )
         except httpx.RequestError as e:
             return GeneralErrorResponse(
                 statusCode=500,
                 statusMessage=f"Request failed: {str(e)}",
-                data=None,
             )
         except Exception as e:
             return GeneralErrorResponse(
                 statusCode=500,
                 statusMessage=f"Unexpected error occurred: {str(e)}",
-                data=None,
             )
 
 
@@ -91,6 +88,10 @@ class AuthenticationService:
         self.config_manager = ConfigManager()
 
     def _get_session_cookie(self):
+        """
+
+        @rtype: str
+        """
         cookie = self.config_manager.read_config("auth", "neptun_session_cookie")
         if not cookie:
             raise AuthenticationError(
@@ -213,7 +214,6 @@ class ChatService:
                 return GeneralErrorResponse(
                     statusCode=401,
                     statusMessage="Session cookie is invalid. Please log in again.",
-                    data=None,
                 )
 
             return True
@@ -221,7 +221,6 @@ class ChatService:
             return GeneralErrorResponse(
                 statusCode=401,
                 statusMessage=str(e),
-                data=None,
             )
 
     def get_available_ai_chats(self) -> Union[ChatsHttpResponse, GeneralErrorResponse]:
@@ -231,7 +230,7 @@ class ChatService:
             return auth_check
         
         id = self.config_manager.read_config("auth.user", "id")
-        url = f"{self.config_manager.read_config('utils','neptun_api_server_host')}/users/{id}/chats?order_by=updated_at:desc"
+        url = f"{self.config_manager.read_config('utils', 'neptun_api_server_host')}/users/{id}/chats?order_by=updated_at:desc"
 
         response = self.client.get(url)
 
@@ -249,7 +248,7 @@ class ChatService:
             return auth_check
 
         id = self.config_manager.read_config("auth.user", "id")
-        url = f"{self.config_manager.read_config('utils','neptun_api_server_host')}/users/{id}/chats/{chat_id}"
+        url = f"{self.config_manager.read_config('utils', 'neptun_api_server_host')}/users/{id}/chats/{chat_id}"
 
         response = self.client.delete(url)
 
@@ -340,19 +339,16 @@ class ChatService:
                 return GeneralErrorResponse(
                     statusCode=response.status_code,
                     statusMessage=response.reason_phrase,
-                    data=response.json(),
                 )
         except ValidationError as ve:
             return GeneralErrorResponse(
                 statusCode=500,
                 statusMessage="Validation Error",
-                data={"details": str(ve)},
             )
         except Exception as e:
             return GeneralErrorResponse(
                 statusCode=500,
                 statusMessage="An unexpected error occurred",
-                data={"details": str(e)},
             )
 
 
@@ -370,6 +366,7 @@ def parse_response(response: str) -> str:
 
 @singleton
 class GithubService:
+
     def __init__(self):
         self.config_manager = ConfigManager()
         self.client = httpx.Client(cookies={"neptun-session": self.config_manager
@@ -386,7 +383,6 @@ class GithubService:
                 return GeneralErrorResponse(
                     statusCode=401,
                     statusMessage="Session cookie is invalid. Please log in again.",
-                    data=None,
                 )
 
             return True
@@ -394,7 +390,6 @@ class GithubService:
             return GeneralErrorResponse(
                 statusCode=401,
                 statusMessage=str(e),
-                data=None,
             )
 
     def get_installations_by_user_id(self) -> Union[GithubAppInstallationHttpResponse, GetInstallationsError, GeneralErrorResponse]:
@@ -459,7 +454,6 @@ class TemplateService:
                 return GeneralErrorResponse(
                     statusCode=401,
                     statusMessage="Session cookie is invalid. Please log in again.",
-                    data=None,
                 )
 
             return True
@@ -467,10 +461,9 @@ class TemplateService:
             return GeneralErrorResponse(
                 statusCode=401,
                 statusMessage=str(e),
-                data=None,
             )
 
-    def create_template(self, collection_uuid: str, create_template_request: CreateTemplateRequest, session_cookie: str) -> Union[Template, ErrorResponse]:
+    def create_template(self, collection_uuid: str, create_template_request: CreateTemplateRequest) -> Union[Template, ErrorResponse]:
         authenticated = self._ensure_authenticated()
         if isinstance(authenticated, GeneralErrorResponse):
             return authenticated
@@ -478,20 +471,56 @@ class TemplateService:
         user_id = int(self.config_manager.read_config("auth.user", "id"))
         url = f"{self.config_manager.read_config('utils', 'neptun_api_server_host')}/users/{user_id}/collections/{collection_uuid}/templates"
 
-        with self.client:
-            response = self.client.post(url, data=create_template_request.model_dump())
+        try:
+            with self.client:
+                response = self.client.post(url, json=create_template_request.dict())
 
-            response_data = response.json()
+                if response.status_code == 400:
+                    return ErrorResponse(
+                        statusCode=400,
+                        statusMessage="Invalid body format. Expected { template, file }"
+                    )
+                elif response.status_code == 401:
+                    return GeneralErrorResponse(
+                        statusCode=401,
+                        statusMessage="Unauthorized. Invalid or missing session cookie."
+                    )
+                elif response.status_code == 403:
+                    return GeneralErrorResponse(
+                        statusCode=403,
+                        statusMessage="Forbidden. User ID mismatch."
+                    )
+                elif response.status_code == 404:
+                    return GeneralErrorResponse(
+                        statusCode=404,
+                        statusMessage="Collection not found."
+                    )
+                elif response.status_code == 500:
+                    return GeneralErrorResponse(
+                        statusCode=500,
+                        statusMessage="Server error."
+                    )
 
-            try:
-                session_cookie = None if not response.cookies.get("neptun-session") else response.cookies.get(
-                    "neptun-session")
-                login_response = LoginHttpResponse.parse_obj(response_data)
+                response_data = response.json()
 
-                login_response.session_cookie = session_cookie
-                return login_response
-            except ValidationError:
-                return ErrorResponse.parse_obj(response_data)
+                if response.status_code == 201:
+                    try:
+                        template_data = response_data.get('template')
+                        return Template(**template_data)
+                    except ValidationError:
+                        return ErrorResponse.parse_obj(response_data)
+
+        except httpx.HTTPStatusError as http_error:
+            return GeneralErrorResponse(
+                statusCode=http_error.response.status_code,
+                statusMessage=f"HTTP error occurred: {http_error}",
+            )
+
+        except Exception as e:
+            return GeneralErrorResponse(
+                statusCode=500,
+                statusMessage=f"An unexpected error occurred: {str(e)}",
+            )
 
 
 @singleton
@@ -515,7 +544,6 @@ class CollectionService:
                 return GeneralErrorResponse(
                     statusCode=401,
                     statusMessage="Session cookie is invalid. Please log in again.",
-                    data=None,
                 )
 
             return True
@@ -523,7 +551,6 @@ class CollectionService:
             return GeneralErrorResponse(
                 statusCode=401,
                 statusMessage=str(e),
-                data=None,
             )
 
     def create_template_collection(self, create_collection_request: CreateCollectionRequest) -> Union[TemplateCollectionResponse, GeneralErrorResponse]:
@@ -550,7 +577,6 @@ class CollectionService:
             return GeneralErrorResponse(
                 statusCode=response.status_code,
                 statusMessage=response.text,
-                data=None,
             )
 
     def get_user_template_collections(self) -> Union[TemplateCollectionResponse, GeneralErrorResponse]:
@@ -573,19 +599,16 @@ class CollectionService:
                 return GeneralErrorResponse(
                     statusCode=403,
                     statusMessage="Forbidden. User ID mismatch or insufficient permissions.",
-                    data=None,
                 )
             else:
                 return GeneralErrorResponse(
                     statusCode=response.status_code,
                     statusMessage=response.text,
-                    data=None,
                 )
         except httpx.RequestError as e:
             return GeneralErrorResponse(
                 statusCode=500,
                 statusMessage=f"Server error: {str(e)}",
-                data=None,
             )
 
     def delete_template_collection(self, collection_uuid: str) -> Union[bool, GeneralErrorResponse]:
@@ -608,13 +631,11 @@ class CollectionService:
                 return GeneralErrorResponse(
                     statusCode=response.status_code,
                     statusMessage=f"Failed to delete collection: {response.text}",
-                    data=None,
                 )
         except httpx.RequestError as e:
             return GeneralErrorResponse(
                 statusCode=500,
                 statusMessage=f"Server error: {str(e)}",
-                data=None,
             )
         finally:
             self.auth_service.close()
