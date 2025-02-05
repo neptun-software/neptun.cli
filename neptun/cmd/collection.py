@@ -178,3 +178,4 @@ def auto_create_template_collection(directory: str = typer.Argument(".", help="D
     typer.secho(f"{current_directory}", fg=typer.colors.GREEN)
 
 
+

@@ -46,6 +46,20 @@ class OTPValidateRequest(BaseModel):
     new_password: str
 
 
+class UserFile(BaseModel):
+    title: Optional[str]
+    text: str
+    language: str
+    extension: str
+    neptun_user_id: int
+
+
+class TemplateData(BaseModel):
+    description: Optional[str]
+    file_name: str
+    neptun_user_id: int
+
+
 class Template(BaseModel):
     id: int
     description: Optional[str]
@@ -55,6 +69,11 @@ class Template(BaseModel):
     neptun_user_id: int
     template_collection_id: Optional[int]
     user_file_id: Optional[int]
+
+
+class CreateTemplateRequest(BaseModel):
+    template: TemplateData
+    file: UserFile
 
 
 class CreateCollectionRequest(BaseModel):

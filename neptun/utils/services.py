@@ -251,11 +251,10 @@ class ChatService:
         id = self.config_manager.read_config("auth.user", "id")
         url = f"{self.config_manager.read_config('utils','neptun_api_server_host')}/users/{id}/chats/{chat_id}"
 
-        try:
-            response = self.client.delete(url)
-            return True
-        except Exception:
-            return False
+        response = self.client.delete(url)
+
+        if response.status_code != 200:
+            return GeneralErrorResponse(statusCode=response.status_code, statusMessage="Error occurred while deleting the selected chat.")
 
     def create_chat(self, create_chat_http_request: CreateChatHttpRequest) \
             -> Union[CreateChatHttpResponse, ErrorResponse, GeneralErrorResponse]:
@@ -437,6 +436,43 @@ class GithubService:
         except ValidationError as e:
             logging.error(f"Validation error while parsing response: {e}")
             raise
+
+
+@singleton
+class TemplateService:
+    def __init__(self):
+        self.config_manager = ConfigManager()
+        self.client = httpx.Client(cookies={"neptun-session": self.config_manager
+                                   .read_config(section="auth",
+                                                key="neptun_session_cookie")})
+        self.auth_service = AuthenticationService()
+
+    def close(self):
+        self.client.close()
+
+    def _ensure_authenticated(self) -> Union[bool, GeneralErrorResponse]:
+        try:
+            cookie = self.auth_service._get_session_cookie()
+
+            is_authenticated = self.auth_service.check_authenticated(cookie)
+            if not is_authenticated:
+                return GeneralErrorResponse(
+                    statusCode=401,
+                    statusMessage="Session cookie is invalid. Please log in again.",
+                    data=None,
+                )
+
+            return True
+        except AuthenticationError as e:
+            return GeneralErrorResponse(
+                statusCode=401,
+                statusMessage=str(e),
+                data=None,
+            )
+
+    def create_template(self):
+
+
 
 
 @singleton

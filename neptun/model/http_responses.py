@@ -43,7 +43,6 @@ class ErrorResponseData(BaseModel):
 class ErrorResponse(BaseModel):
     statusCode: int
     statusMessage: str
-    #stack: List[str] = Field(default_factory=list)
     data: Optional[ErrorResponseData] = None
 
 
@@ -94,6 +93,7 @@ class GithubAppInstallation(BaseModel):
 
 class GithubAppInstallationHttpResponse(BaseModel):
     installations: list[GithubAppInstallation]
+
 
 class GetInstallationsError(BaseModel):
     statusCode: int
@@ -190,6 +190,10 @@ class TemplateCollection(BaseModel):
     updated_at: str
     neptun_user_id: Optional[int] = -1
     templates: Optional[List] = None
+
+
+class CreateTemplateResponse(BaseModel):
+    template: Template
 
 
 class TemplateCollectionResponse(BaseModel):
