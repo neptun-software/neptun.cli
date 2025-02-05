@@ -257,23 +257,48 @@ class ChatService:
 
     def create_chat(self, create_chat_http_request: CreateChatHttpRequest) \
             -> Union[CreateChatHttpResponse, ErrorResponse, GeneralErrorResponse]:
-        
+
+        # Ensure the user is authenticated before proceeding
         auth_check = self._ensure_authenticated()
         if isinstance(auth_check, GeneralErrorResponse):
             return auth_check
-        
+
+        # Fetch user ID from configuration
         id = self.config_manager.read_config("auth.user", "id")
+
+        # Construct the URL for creating a new chat
         url = f"{self.config_manager.read_config('utils', 'neptun_api_server_host')}/users/{id}/chats"
 
-        response = self.client.post(url, data=create_chat_http_request.model_dump())
-
-        response_data = response.json()
-
         try:
-            chat_response = CreateChatHttpResponse.model_validate(response_data)
-            return chat_response
-        except ValidationError:
-            return ErrorResponse.model_validate(response_data)
+            response = self.client.post(url, data=create_chat_http_request.dict())
+
+            response_data = response.json()
+
+            logging.log(msg=f"CHAT\n{response_data}", level=logging.INFO)
+
+            if 'chat' not in response_data or response_data['chat'] is None:
+                return ErrorResponse(
+                    statusCode=400,
+                    statusMessage="Failed to create chat. The 'chat' field is missing or invalid."
+                )
+
+            try:
+                chat_response = CreateChatHttpResponse.model_validate(response_data)
+                return chat_response
+            except ValidationError:
+                return ErrorResponse.model_validate(response_data)
+
+        except httpx.HTTPStatusError as http_error:
+            return GeneralErrorResponse(
+                statusCode=http_error.response.status_code,
+                statusMessage=f"HTTP error occurred: {http_error}",
+            )
+
+        except Exception as e:
+            return GeneralErrorResponse(
+                statusCode=500,
+                statusMessage=f"An unexpected error occurred: {str(e)}",
+            )
 
     async def get_chat_messages_by_chat_id(self) \
             -> Union[ChatMessagesHttpResponse, ErrorResponse]:

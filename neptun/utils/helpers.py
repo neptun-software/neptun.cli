@@ -62,7 +62,6 @@ class ChatResponseConverter:
         return formatted_text
 
 # Example usage
-# Example usage
 text = """0:"Okay"
 0:"."
 0:"\n"

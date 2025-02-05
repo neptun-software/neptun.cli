@@ -51,7 +51,6 @@ class Chat(BaseModel):
     name: str
     model: str
     created_at: str
-    updated_at: str
     neptun_user_id: Optional[int]
 
 

@@ -66,13 +66,19 @@ def create_new_chat_dialog():
 
     new_chat_model = questionary.select(message="Select a ai-base-model:",
                                         choices=[
-                                            "gpt-3.5-turbo",
-                                            ]).ask()
+                                            "qwen/Qwen2.5-72B-Instruct",
+                                            "qwen/Qwen2.5-Coder-32B-Instruct",
+                                            "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B",
+                                            "mistralai/Mistral-Nemo-Instruct-2407",
+                                            "microsoft/Phi-3-mini-4k-instruct",
 
+                                        ]).ask()
     if new_chat_model is None:
         raise typer.Exit()
 
     create_chat_http_request = CreateChatHttpRequest(name=new_chat_name, model=new_chat_model)
+
+    typer.echo(create_chat_http_request.dict())
 
     with Progress(
             SpinnerColumn(),
@@ -207,6 +213,7 @@ def delete_selected_chat_dialog():
 
         if isinstance(result, ChatsHttpResponse):
             progress.update(collecting_data_task, completed=True, visible=False)
+            progress.stop()
 
             if result.chats is not None and len(result.chats) > 0:
                 action = questionary.select(

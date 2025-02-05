@@ -41,16 +41,18 @@ EXT_TO_LANG = {
 def options():
     choice = questionary.select(
         "Choose an available function:",
-        choices=["Create Template Collection", "List Template Collections", "Delete Template Collection"],
+        choices=["Create Collection()", "List Collections()", "Delete Collection()"],
     ).ask()
 
     match choice:
-        case "Create Template Collection()":
+        case "Create Collection()":
             create_template_collection()
-        case "List Template Collections()":
+        case "List Collections()":
             list_template_collections()
-        case "Delete Template Collection()":
+        case "Delete Collection()":
             delete_template_collection()
+        case "Inspect Collection()":
+            inspect_template_collection()
 
 
 @collection_app.command(name="options", help="List all template options available.")
@@ -146,7 +148,6 @@ def list_template_collections(limit: int = None, select_last: bool = False):
 
 @collection_app.command(name="delete", help="Delete a template collection.")
 def delete_template_collection(limit: int = None, select_last: bool = False):
-    questionary.text(message="")
     with Progress(
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),
@@ -164,6 +165,7 @@ def delete_template_collection(limit: int = None, select_last: bool = False):
 
         if isinstance(result, TemplateCollectionResponse):
             progress.update(collecting_data_task, completed=True, visible=False)
+            progress.stop()
 
             if result.collections and len(result.collections) > 0:
                 action = questionary.select(

@@ -1,4 +1,5 @@
 import configparser
+import logging
 import os
 from functools import wraps
 from pathlib import Path
@@ -41,6 +42,7 @@ class ConfigManager:
         self.config_file_path = config_file_path
         self.config = configparser.ConfigParser()
         self._ensure_config_file_exists()
+        logging.log(msg=f"{str(CONFIG_DIR_PATH)}", level=logging.INFO)
 
     def set_config_file_path(self, path: str):
         self.config_file_path = path
