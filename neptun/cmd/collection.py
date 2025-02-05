@@ -5,6 +5,7 @@ import typer
 import questionary
 from rich.console import Console
 from rich.table import Table
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from neptun.model.http_requests import CreateCollectionRequest, UserFile, CreateTemplateRequest, TemplateData
 from neptun.utils.services import CollectionService, TemplateService
 from neptun.utils.managers import ConfigManager
@@ -195,23 +196,67 @@ def get_readable_files_in_directory(directory: str, neptun_user_id: int) -> List
 
         if file_name == "app.log":
             continue
+
         file_path = os.path.join(directory, file_name)
         if os.path.isfile(file_path):
             try:
                 with open(file_path, 'r', encoding='utf-8') as f:
                     content = f.read()
+
                 file_name_without_extension, file_extension = os.path.splitext(file_name)
+                extensions = []
+
+                while file_extension:
+                    extensions.insert(0, file_extension)
+                    file_name_without_extension, file_extension = os.path.splitext(file_name_without_extension)
+
+                full_extension = ''.join(extensions)
+
+                language = EXT_TO_LANG.get(full_extension.lower(), 'Unknown')
 
                 readable_files.append(UserFile(
-                    title=file_name_without_extension,
+                    title=file_name,
                     text=content,
-                    language=EXT_TO_LANG.get(file_extension.lower(), 'Unknown'),  # Todo: Should be optimized... a bit messy. But for now ok :)
-                    extension=file_extension,
+                    language=language,
+                    extension=full_extension,
                     neptun_user_id=neptun_user_id
                 ))
+
             except (UnicodeDecodeError, IOError):
                 continue
+
     return readable_files
+
+
+def process_file(readable_file, latest_collection):
+    try:
+        typer.secho(f"Processing {readable_file.title}...", fg=typer.colors.BRIGHT_BLACK)
+
+        create_template_data = TemplateData(
+            description="No description",
+            file_name=f"{readable_file.title}",
+            neptun_user_id=int(config_manager.read_config('auth.user', 'id'))
+        )
+
+        create_template_request = CreateTemplateRequest(
+            template=create_template_data,
+            file=readable_file
+        )
+
+        create_template_result = template_service.create_template(
+            collection_uuid=latest_collection.share_uuid,
+            create_template_request=create_template_request,
+        )
+
+        if isinstance(create_template_result, Template):
+            typer.secho(f"Template '{create_template_result.file_name}' created successfully!", fg=typer.colors.GREEN)
+            typer.echo(readable_file.extension)
+        elif isinstance(create_template_result, GeneralErrorResponse):
+            typer.secho(
+                f"Error: {create_template_result.statusMessage} (Status Code: {create_template_result.statusCode})",
+                fg=typer.colors.RED)
+    except Exception as e:
+        typer.secho(f"An error occurred while processing {readable_file.title}: {str(e)}", fg=typer.colors.RED)
 
 
 @collection_app.command(name="create", help="Automatically create a new collection with all the files inside your current directory.")
@@ -274,32 +319,17 @@ def auto_create_template_collection(directory: str = typer.Argument(".", help="D
 
             readable_files = get_readable_files_in_directory(directory, int(config_manager.read_config('auth.user', 'id')))
 
-            for readable_file in readable_files:
-                typer.secho(readable_file.title, fg=typer.colors.GREEN)
+            with ThreadPoolExecutor() as executor:
+                futures = [
+                    executor.submit(process_file, readable_file, latest_collection)
+                    for readable_file in readable_files
+                ]
 
-                create_template_data = TemplateData(
-                    description="No description",
-                    file_name=f"{readable_file.title}.{readable_file.extension}",
-                    neptun_user_id=int(config_manager.read_config('auth.user', 'id'))
-                )
+                for future in as_completed(futures):
+                    pass
 
-                create_template_request = CreateTemplateRequest(
-                    template=create_template_data,
-                    file=readable_file
-                )
-
-                create_template_result = template_service.create_template(
-                    collection_uuid=latest_collection.share_uuid,
-                    create_template_request=create_template_request,
-                )
-
-                if isinstance(create_template_result, Template):
-                    typer.secho(f"Template '{create_template_result.file_name}' created successfully!",
-                                fg=typer.colors.GREEN)
-                elif isinstance(create_template_result, GeneralErrorResponse):
-                    typer.secho(
-                        f"Error: {create_template_result.statusMessage} (Status Code: {create_template_result.statusCode})",
-                        fg=typer.colors.RED)
+            typer.secho(f"Finished appending templates to {latest_collection.name}!", fg=typer.colors.GREEN)
+            template_service.close()
 
         elif isinstance(result, GeneralErrorResponse):
             typer.echo(f"Error: {result.statusMessage} (Status Code: {result.statusCode})")

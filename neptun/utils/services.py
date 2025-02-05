@@ -472,43 +472,42 @@ class TemplateService:
         url = f"{self.config_manager.read_config('utils', 'neptun_api_server_host')}/users/{user_id}/collections/{collection_uuid}/templates"
 
         try:
-            with self.client:
-                response = self.client.post(url, json=create_template_request.dict())
+            response = self.client.post(url, json=create_template_request.dict())
 
-                if response.status_code == 400:
-                    return ErrorResponse(
-                        statusCode=400,
-                        statusMessage="Invalid body format. Expected { template, file }"
-                    )
-                elif response.status_code == 401:
-                    return GeneralErrorResponse(
-                        statusCode=401,
-                        statusMessage="Unauthorized. Invalid or missing session cookie."
-                    )
-                elif response.status_code == 403:
-                    return GeneralErrorResponse(
-                        statusCode=403,
-                        statusMessage="Forbidden. User ID mismatch."
-                    )
-                elif response.status_code == 404:
-                    return GeneralErrorResponse(
-                        statusCode=404,
-                        statusMessage="Collection not found."
-                    )
-                elif response.status_code == 500:
-                    return GeneralErrorResponse(
-                        statusCode=500,
-                        statusMessage="Server error."
-                    )
+            if response.status_code == 400:
+                return ErrorResponse(
+                    statusCode=400,
+                    statusMessage="Invalid body format. Expected { template, file }"
+                )
+            elif response.status_code == 401:
+                return GeneralErrorResponse(
+                    statusCode=401,
+                    statusMessage="Unauthorized. Invalid or missing session cookie."
+                )
+            elif response.status_code == 403:
+                return GeneralErrorResponse(
+                    statusCode=403,
+                    statusMessage="Forbidden. User ID mismatch."
+                )
+            elif response.status_code == 404:
+                return GeneralErrorResponse(
+                    statusCode=404,
+                    statusMessage="Collection not found."
+                )
+            elif response.status_code == 500:
+                return GeneralErrorResponse(
+                    statusCode=500,
+                    statusMessage="Server error."
+                )
 
-                response_data = response.json()
+            response_data = response.json()
 
-                if response.status_code == 201:
-                    try:
-                        template_data = response_data.get('template')
-                        return Template(**template_data)
-                    except ValidationError:
-                        return ErrorResponse.parse_obj(response_data)
+            if response.status_code == 201:
+                try:
+                    template_response = Template.model_validate(response_data)
+                    return template_response
+                except ValidationError:
+                    return ErrorResponse.parse_obj(response_data)
 
         except httpx.HTTPStatusError as http_error:
             return GeneralErrorResponse(
