@@ -45,7 +45,8 @@ def options():
         choices=["Create Collection()",
                  "List Collections()",
                  "Delete Collection()",
-                 "Update Collection()"],
+                 "Update Collection()",
+                 "Pull Collection()"],
     ).ask()
 
     match choice:
@@ -59,6 +60,8 @@ def options():
             inspect_template_collection()
         case "Update Collection()":
             update_template_collection()
+        case "Pull Collection()":
+            pull_template_collection()
 
 
 @collection_app.command(name="options", help="List all template options available.")
@@ -281,6 +284,30 @@ def update_template_collection(limit: int = None, select_last: bool = False):
             typer.secho(f"Failed to update collection: {response.statusMessage}", fg=typer.colors.RED)
         else:
             typer.secho(f"Successfully updated collection: {name}.", fg=typer.colors.GREEN)
+
+
+@collection_app.command(name="pull", help="Pull a template collection from Neptun to your local disk.")
+def pull_template_collection(limit: int = None, select_last: bool = False):
+    with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            transient=True,
+    ) as progress:
+        collecting_data_task = progress.add_task(description="Collecting available collections...", total=None)
+
+        result = collection_service.get_user_template_collections()
+        collection_dict = {f"{collection.id}: {collection.name}": collection for collection in result.collections}
+
+        if select_last:
+            collection_choices = [f"{collection.id}: {collection.name}" for collection in
+                                  (result.collections[:-limit] if limit else result.collections[-1:])]
+        else:
+            collection_choices = [f"{collection.id}: {collection.name}" for collection in
+                                  (result.collections[:limit] if limit else result.collections)]
+
+        if isinstance(result, TemplateCollectionResponse):
+            progress.update(collecting_data_task, completed=True, visible=False)
+            progress.stop()
 
 
 @collection_app.command(name="inspect", help="Inspect the information about a template collection.")
