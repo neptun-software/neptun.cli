@@ -121,10 +121,10 @@ def list_template_collections(limit: int = None, select_last: bool = False):
             return
 
         table = Table()
-        table.add_column("ID", justify="center", style="cyan", no_wrap=True)
         table.add_column("Name", justify="left", style="magenta", no_wrap=True)
         table.add_column("Description", justify="left", no_wrap=True)
         table.add_column("Shared", justify="center", style="green", no_wrap=True)
+        table.add_column("Shared-UUID", justify="center", style="green", no_wrap=True)
 
         if select_last:
             collections_to_display = collections_response.collections[
@@ -135,10 +135,11 @@ def list_template_collections(limit: int = None, select_last: bool = False):
 
         for collection in collections_to_display:
             table.add_row(
-                str(collection.id),
                 collection.name,
                 collection.description or "No description",
                 "Yes" if collection.is_shared else "No",
+                collection.share_uuid,
+
             )
 
         console.print(table)
@@ -279,30 +280,6 @@ def update_template_collection(limit: int = None, select_last: bool = False):
             typer.secho(f"Successfully updated collection: {name}.", fg=typer.colors.GREEN)
 
 
-@collection_app.command(name="pull", help="Pull a template collection from Neptun to your local disk.")
-def pull_template_collection(limit: int = None, select_last: bool = False):
-    with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            transient=True,
-    ) as progress:
-        collecting_data_task = progress.add_task(description="Collecting available collections...", total=None)
-
-        result = collection_service.get_user_template_collections()
-        collection_dict = {f"{collection.id}: {collection.name}": collection for collection in result.collections}
-
-        if select_last:
-            collection_choices = [f"{collection.id}: {collection.name}" for collection in
-                                  (result.collections[:-limit] if limit else result.collections[-1:])]
-        else:
-            collection_choices = [f"{collection.id}: {collection.name}" for collection in
-                                  (result.collections[:limit] if limit else result.collections)]
-
-        if isinstance(result, TemplateCollectionResponse):
-            progress.update(collecting_data_task, completed=True, visible=False)
-            progress.stop()
-
-
 @collection_app.command(name="inspect", help="Inspect the information about a template collection.")
 def inspect_template_collection(limit: int = None, select_last: bool = False):
     with Progress(
@@ -313,13 +290,13 @@ def inspect_template_collection(limit: int = None, select_last: bool = False):
         collecting_data_task = progress.add_task(description="Collecting available collections...", total=None)
 
         result = collection_service.get_user_template_collections()
-        collection_dict = {f"{collection.id}: {collection.name}": collection for collection in result.collections}
+        collection_dict = {f"{collection.name}": collection for collection in result.collections}
 
         if select_last:
-            collection_choices = [f"{collection.id}: {collection.name}" for collection in
+            collection_choices = [f"{collection.name}" for collection in
                                   (result.collections[:-limit] if limit else result.collections[-1:])]
         else:
-            collection_choices = [f"{collection.id}: {collection.name}" for collection in
+            collection_choices = [f"{collection.name}" for collection in
                                   (result.collections[:limit] if limit else result.collections)]
 
         if isinstance(result, TemplateCollectionResponse):
@@ -339,7 +316,6 @@ def inspect_template_collection(limit: int = None, select_last: bool = False):
                 table.add_column("Attribute", justify="left", no_wrap=True)
                 table.add_column("Value", justify="left", no_wrap=True)
 
-                table.add_row("ID", str(selected_collection_object.id))
                 table.add_row("Name", selected_collection_object.name)
                 table.add_row("Description",
                               selected_collection_object.description if selected_collection_object.description else '/')
@@ -484,7 +460,6 @@ def auto_create_template_collection(directory: str = typer.Argument(".", help="D
             table.add_column("Attribute", justify="left", no_wrap=True)
             table.add_column("Value", justify="left", no_wrap=True)
 
-            table.add_row("ID", str(latest_collection.id))
             table.add_row("Name", latest_collection.name)
             table.add_row("Description", latest_collection.description if latest_collection.description else '/')
             table.add_row("Share UUID", latest_collection.share_uuid)
@@ -510,6 +485,30 @@ def auto_create_template_collection(directory: str = typer.Argument(".", help="D
 
         elif isinstance(result, GeneralErrorResponse):
             typer.echo(f"Error: {result.statusMessage} (Status Code: {result.statusCode})")
+
+
+@collection_app.command(name="pull", help="Pull a template collection from Neptun to your local disk.")
+def pull_template_collection(limit: int = None, select_last: bool = False):
+    with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            transient=True,
+    ) as progress:
+        collecting_data_task = progress.add_task(description="Collecting available collections...", total=None)
+
+        result = collection_service.get_user_template_collections()
+        collection_dict = {f"{collection.id}: {collection.name}": collection for collection in result.collections}
+
+        if select_last:
+            collection_choices = [f"{collection.id}: {collection.name}" for collection in
+                                  (result.collections[:-limit] if limit else result.collections[-1:])]
+        else:
+            collection_choices = [f"{collection.id}: {collection.name}" for collection in
+                                  (result.collections[:limit] if limit else result.collections)]
+
+        if isinstance(result, TemplateCollectionResponse):
+            progress.update(collecting_data_task, completed=True, visible=False)
+            progress.stop()
 
 
 if __name__ == "__main__":
