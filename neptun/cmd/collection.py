@@ -10,10 +10,12 @@ from rich.table import Table
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from neptun.model.http_requests import CreateCollectionRequest, UserFile, CreateTemplateRequest, TemplateData, \
     UpdateCollectionRequest
+from neptun.utils.dicts import EXT_TO_LANG
 from neptun.utils.services import CollectionService, TemplateService
 from neptun.utils.managers import ConfigManager
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from neptun.model.http_responses import TemplateCollectionResponse, GeneralErrorResponse, Template
+
 
 collection_app = typer.Typer(name="Collection Manager",
                              help="Manage your neptun collections.")
@@ -22,73 +24,6 @@ collection_service = CollectionService()
 template_service = TemplateService()
 config_manager = ConfigManager()
 console = Console()
-
-EXT_TO_LANG = {
-    'js': 'js',
-    'jsx': 'jsx',
-    'json': 'json',
-    'toml': 'toml',
-    'ts': 'ts',
-    'tsx': 'tsx',
-    'vue': 'vue',
-    'vue-html': 'html',
-    'svelte': 'svelte',
-    'css': 'css',
-    'html': 'html',
-    'xml': 'xml',
-    'bash': 'sh',
-    'shell': 'sh',
-    'shellscript': 'sh',
-    'bat': 'bat',
-    'batch': 'bat',
-    'cmd': 'cmd',
-    'powershell': 'ps1',
-    'md': 'md',
-    'mdc': 'md',
-    'yaml': 'yaml',
-    'yml': 'yml',
-    'python': 'py',
-    'py': 'py',
-    'asciidoc': 'adoc',
-    'c': 'c',
-    'c#': 'cs',
-    'cs': 'cs',
-    'csharp': 'cs',
-    'c++': 'cpp',
-    'dart': 'dart',
-    'objective-c': 'm',
-    'objective-cpp': 'mm',
-    'swift': 'swift',
-    'docker': 'dockerfile',
-    'dockerfile': 'dockerfile',
-    'git-commit': 'txt',
-    'git-rebase': 'txt',
-    'go': 'go',
-    'java': 'java',
-    'kotlin': 'kt',
-    'gql': 'graphql',
-    'http': 'http',
-    'latex': 'tex',
-    'lua': 'lua',
-    'sass': 'sass',
-    'less': 'less',
-    'markdown': 'md',
-    'makefile': 'makefile',
-    'mdx': 'mdx',
-    'nginx': 'conf',
-    'nix': 'nix',
-    'php': 'php',
-    'scheme': 'scm',
-    'plsql': 'sql',
-    'sql': 'sql',
-    'postcss': 'css',
-    'prisma': 'prisma',
-    'rust': 'rs',
-    'rs': 'rs',
-    'csv': 'csv',
-    'env': 'text',
-    'env.example': 'text'
-}
 
 
 def options():
@@ -561,7 +496,6 @@ def auto_create_template_collection(directory: str = typer.Argument(".", help="D
 
             readable_files = get_readable_files_in_directory(directory,
                                                              int(config_manager.read_config('auth.user', 'id')))
-            typer.secho(readable_files)
             with ThreadPoolExecutor() as executor:
                 futures = [
                     executor.submit(process_file, readable_file, latest_collection)
