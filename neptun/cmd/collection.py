@@ -1,4 +1,5 @@
 import os
+import random
 from collections import deque
 from pathlib import Path
 from typing import List, Tuple
@@ -531,13 +532,19 @@ def pull_template_collection(limit: int = None,
                     raise typer.Exit()
 
 
+def generate_default_name():
+    random_suffix = random.randint(1000, 9999)
+    return f"neptun_collection_{random_suffix}"
+
+
 def save_collection_to_disk(collection, no_dir: bool):
     base_dir = Path(os.getcwd())
 
     if no_dir:
         collection_dir = base_dir
     else:
-        collection_dir = base_dir / collection.name
+        collection_name = collection.name.strip() if collection.name.strip() else generate_default_name()
+        collection_dir = base_dir / collection_name
         collection_dir.mkdir(parents=True, exist_ok=True)
 
     def write_file(template):
@@ -553,7 +560,7 @@ def save_collection_to_disk(collection, no_dir: bool):
         executor.map(write_file, collection.templates)
 
     typer.secho(
-        f"Successfully pulled {collection.name} into {'current directory' if no_dir else collection_dir}",
+        f"✅ Successfully pulled {collection.name if collection.name.strip() else collection_dir.name} into {'current directory' if no_dir else collection_dir}",
         fg="green"
     )
 
