@@ -1,4 +1,6 @@
 import os
+from collections import deque
+from pathlib import Path
 from typing import List, Tuple
 
 import typer
@@ -22,20 +24,70 @@ config_manager = ConfigManager()
 console = Console()
 
 EXT_TO_LANG = {
-    '.py': 'Python',
-    '.js': 'JavaScript',
-    '.cpp': 'C++',
-    '.java': 'Java',
-    '.html': 'HTML',
-    '.css': 'CSS',
-    '.rb': 'Ruby',
-    '.php': 'PHP',
-    '.go': 'Go',
-    '.sh': 'Shell Script',
-    '.json': 'JSON',
-    '.yaml': 'YAML',
-    '.txt': 'Text',
-    '.md': 'Markdown'
+    'js': 'js',
+    'jsx': 'jsx',
+    'json': 'json',
+    'toml': 'toml',
+    'ts': 'ts',
+    'tsx': 'tsx',
+    'vue': 'vue',
+    'vue-html': 'html',
+    'svelte': 'svelte',
+    'css': 'css',
+    'html': 'html',
+    'xml': 'xml',
+    'bash': 'sh',
+    'shell': 'sh',
+    'shellscript': 'sh',
+    'bat': 'bat',
+    'batch': 'bat',
+    'cmd': 'cmd',
+    'powershell': 'ps1',
+    'md': 'md',
+    'mdc': 'md',
+    'yaml': 'yaml',
+    'yml': 'yml',
+    'python': 'py',
+    'py': 'py',
+    'asciidoc': 'adoc',
+    'c': 'c',
+    'c#': 'cs',
+    'cs': 'cs',
+    'csharp': 'cs',
+    'c++': 'cpp',
+    'dart': 'dart',
+    'objective-c': 'm',
+    'objective-cpp': 'mm',
+    'swift': 'swift',
+    'docker': 'dockerfile',
+    'dockerfile': 'dockerfile',
+    'git-commit': 'txt',
+    'git-rebase': 'txt',
+    'go': 'go',
+    'java': 'java',
+    'kotlin': 'kt',
+    'gql': 'graphql',
+    'http': 'http',
+    'latex': 'tex',
+    'lua': 'lua',
+    'sass': 'sass',
+    'less': 'less',
+    'markdown': 'md',
+    'makefile': 'makefile',
+    'mdx': 'mdx',
+    'nginx': 'conf',
+    'nix': 'nix',
+    'php': 'php',
+    'scheme': 'scm',
+    'plsql': 'sql',
+    'sql': 'sql',
+    'postcss': 'css',
+    'prisma': 'prisma',
+    'rust': 'rs',
+    'rs': 'rs',
+    'csv': 'csv',
+    'env': 'text',
+    'env.example': 'text'
 }
 
 
@@ -71,7 +123,6 @@ def list_template_options():
 
 @collection_app.command(name="create-empty", help="Create a new template collection.")
 def create_template_collection():
-
     name = questionary.text("Name of the template collection:").ask()
     is_shared = questionary.select(
         "Should this collection be shared?",
@@ -97,7 +148,8 @@ def create_template_collection():
         progress.stop()
 
         if isinstance(result, TemplateCollectionResponse):
-            typer.secho(f"Template collection '{create_collection_request.name}' created successfully!", fg=typer.colors.GREEN)
+            typer.secho(f"Template collection '{create_collection_request.name}' created successfully!",
+                        fg=typer.colors.GREEN)
 
             latest_collection = result.collections[-1]
             table = Table()
@@ -140,9 +192,11 @@ def list_template_collections(limit: int = None, select_last: bool = False):
         table.add_column("Shared", justify="center", style="green", no_wrap=True)
 
         if select_last:
-            collections_to_display = collections_response.collections[-limit:] if limit else collections_response.collections[-1:]
+            collections_to_display = collections_response.collections[
+                                     -limit:] if limit else collections_response.collections[-1:]
         else:
-            collections_to_display = collections_response.collections[:limit] if limit else collections_response.collections
+            collections_to_display = collections_response.collections[
+                                     :limit] if limit else collections_response.collections
 
         for collection in collections_to_display:
             table.add_row(
@@ -168,9 +222,11 @@ def delete_template_collection(limit: int = None, select_last: bool = False):
         collection_dict = {f"{collection.name}": collection for collection in result.collections}
 
         if select_last:
-            collection_choices = [f"{collection.name}" for collection in (result.collections[:-limit] if limit else result.collections[-1:])]
+            collection_choices = [f"{collection.name}" for collection in
+                                  (result.collections[:-limit] if limit else result.collections[-1:])]
         else:
-            collection_choices = [f"{collection.name}" for collection in (result.collections[:limit] if limit else result.collections)]
+            collection_choices = [f"{collection.name}" for collection in
+                                  (result.collections[:limit] if limit else result.collections)]
 
         if isinstance(result, TemplateCollectionResponse):
             progress.update(collecting_data_task, completed=True, visible=False)
@@ -189,11 +245,13 @@ def delete_template_collection(limit: int = None, select_last: bool = False):
 
                 deleting_data_task = progress.add_task(description="Deleting selected collection...", total=None)
 
-                deleted_collection = collection_service.delete_template_collection(selected_collection_object.share_uuid)
+                deleted_collection = collection_service.delete_template_collection(
+                    selected_collection_object.share_uuid)
                 if deleted_collection is True:
                     progress.update(deleting_data_task, completed=True, visible=False)
                     progress.stop()
-                    typer.secho(f"Successfully deleted collection: {selected_collection_object.name}.", fg=typer.colors.GREEN)
+                    typer.secho(f"Successfully deleted collection: {selected_collection_object.name}.",
+                                fg=typer.colors.GREEN)
                 else:
                     typer.secho(f"Failed to delete collection: {selected_collection_object.name}.", fg=typer.colors.RED)
             else:
@@ -348,7 +406,8 @@ def inspect_template_collection(limit: int = None, select_last: bool = False):
 
                 table.add_row("ID", str(selected_collection_object.id))
                 table.add_row("Name", selected_collection_object.name)
-                table.add_row("Description", selected_collection_object.description if selected_collection_object.description else '/')
+                table.add_row("Description",
+                              selected_collection_object.description if selected_collection_object.description else '/')
                 table.add_row("Share UUID", selected_collection_object.share_uuid)
                 table.add_row("Is Shared", "Yes" if selected_collection_object.is_shared else "No")
 
@@ -358,13 +417,33 @@ def inspect_template_collection(limit: int = None, select_last: bool = False):
                 typer.secho(f"No collections available!", fg=typer.colors.BRIGHT_YELLOW)
 
 
+# think smart... not hard...
+def extract_filename_and_extension(file_name: str) -> Tuple[str, str]:
+
+    if file_name.startswith("."):
+        temp_name = "dummy" + file_name  # replace non-existing filename with dummy, to ensure that Path().suffixes works
+        file_path = Path(temp_name)
+    else:
+        file_path = Path(file_name)
+
+    suffixes = file_path.suffixes
+    filename = file_path.stem.replace("dummy", '')
+
+    if file_name.startswith(".") and '.' in file_name[1:]:
+        filename = ""
+        full_extension = file_name[file_name.index('.'):]
+    else:
+        full_extension = "".join(suffixes) if suffixes else ""
+
+    return filename, full_extension
+
+
 def get_readable_files_in_directory(directory: str, neptun_user_id: int) -> List[UserFile]:
     readable_files = []
 
     for file_name in os.listdir(directory):
-
         if file_name == "app.log":
-            continue
+            continue  # Skip log files
 
         file_path = os.path.join(directory, file_name)
         if os.path.isfile(file_path):
@@ -372,22 +451,15 @@ def get_readable_files_in_directory(directory: str, neptun_user_id: int) -> List
                 with open(file_path, 'r', encoding='utf-8') as f:
                     content = f.read()
 
-                file_name_without_extension, file_extension = os.path.splitext(file_name)
-                extensions = []
+                filename, full_extension = extract_filename_and_extension(file_name)
 
-                while file_extension:
-                    extensions.insert(0, file_extension)
-                    file_name_without_extension, file_extension = os.path.splitext(file_name_without_extension)
-
-                full_extension = ''.join(extensions)
-
-                language = EXT_TO_LANG.get(full_extension.lower(), 'Unknown')
+                language = EXT_TO_LANG.get(full_extension.lower()[1:], 'Unknown')
 
                 readable_files.append(UserFile(
-                    title=file_name,
+                    title=f"{full_extension}" if filename == "" else f"{filename}{full_extension}",
                     text=content,
                     language=language,
-                    extension=full_extension,
+                    extension=full_extension[1:],
                     neptun_user_id=neptun_user_id
                 ))
 
@@ -428,7 +500,8 @@ def process_file(readable_file, latest_collection):
         typer.secho(f"An error occurred while processing {readable_file.title}: {str(e)}", fg=typer.colors.RED)
 
 
-@collection_app.command(name="create", help="Automatically create a new collection with all the files inside your current directory.")
+@collection_app.command(name="create",
+                        help="Automatically create a new collection with all the files inside your current directory.")
 def auto_create_template_collection(directory: str = typer.Argument(".", help="Directory for the collection")):
     if directory == ".":
         directory = os.getcwd()
@@ -486,8 +559,9 @@ def auto_create_template_collection(directory: str = typer.Argument(".", help="D
 
             typer.secho(f"Reading files from {current_directory}...", fg=typer.colors.BRIGHT_BLACK)
 
-            readable_files = get_readable_files_in_directory(directory, int(config_manager.read_config('auth.user', 'id')))
-
+            readable_files = get_readable_files_in_directory(directory,
+                                                             int(config_manager.read_config('auth.user', 'id')))
+            typer.secho(readable_files)
             with ThreadPoolExecutor() as executor:
                 futures = [
                     executor.submit(process_file, readable_file, latest_collection)
@@ -504,3 +578,23 @@ def auto_create_template_collection(directory: str = typer.Argument(".", help="D
             typer.echo(f"Error: {result.statusMessage} (Status Code: {result.statusCode})")
 
 
+if __name__ == "__main__":
+    test_directory = "test_dir"
+    os.makedirs(test_directory, exist_ok=True)
+
+    test_files = {
+        ".env.example": 'NAME="helloworld"',
+        ".env": 'NAME="helloworld"',
+        "hello.env.example": 'NAME="helloworld"',
+        "Dockerfile": 'NAME="helloworld"',
+        "docker-compose.yaml": 'NAME="helloworld"',
+    }
+
+    for file_name, content in test_files.items():
+        with open(os.path.join(test_directory, file_name), 'w') as f:
+            f.write(content)
+
+    readable_files = get_readable_files_in_directory(test_directory, neptun_user_id=123)
+
+    for file in readable_files:
+        print(file)
