@@ -16,7 +16,6 @@ from neptun.utils.managers import ConfigManager
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from neptun.model.http_responses import TemplateCollectionResponse, GeneralErrorResponse, Template
 
-
 collection_app = typer.Typer(name="Collection Manager",
                              help="Manage your neptun collections.")
 
@@ -330,7 +329,6 @@ def inspect_template_collection(limit: int = None, select_last: bool = False):
 
 # think smart... not hard...
 def extract_filename_and_extension(file_name: str) -> Tuple[str, str]:
-
     if file_name.startswith("."):
         temp_name = "dummy" + file_name  # replace non-existing filename with dummy, to ensure that Path().suffixes works
         file_path = Path(temp_name)
@@ -488,7 +486,12 @@ def auto_create_template_collection(directory: str = typer.Argument(".", help="D
 
 
 @collection_app.command(name="pull", help="Pull a template collection from Neptun to your local disk.")
-def pull_template_collection(limit: int = None, select_last: bool = False):
+def pull_template_collection(limit: int = None,
+                             select_last: bool = False,
+                             no_dir: bool = typer.Option(False, "--no-dir",
+                                                         help="Place files directly in the current directory without creating a collection folder.")
+
+                             ):
     with Progress(
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),
@@ -497,18 +500,62 @@ def pull_template_collection(limit: int = None, select_last: bool = False):
         collecting_data_task = progress.add_task(description="Collecting available collections...", total=None)
 
         result = collection_service.get_user_template_collections()
-        collection_dict = {f"{collection.id}: {collection.name}": collection for collection in result.collections}
+        collection_dict = {f"{collection.name}": collection for collection in result.collections}
 
         if select_last:
-            collection_choices = [f"{collection.id}: {collection.name}" for collection in
+            collection_choices = [f"{collection.name}" for collection in
                                   (result.collections[:-limit] if limit else result.collections[-1:])]
         else:
-            collection_choices = [f"{collection.id}: {collection.name}" for collection in
+            collection_choices = [f"{collection.name}" for collection in
                                   (result.collections[:limit] if limit else result.collections)]
 
         if isinstance(result, TemplateCollectionResponse):
             progress.update(collecting_data_task, completed=True, visible=False)
             progress.stop()
+
+            if result.collections and len(result.collections) > 0:
+                action = questionary.select(
+                    message="Select a template collection to delete:",
+                    choices=collection_choices,
+                ).ask()
+
+                if action is None:
+                    raise typer.Exit()
+
+                selected_collection_object = collection_dict.get(action)
+                if selected_collection_object:
+                    typer.secho(f"Pulling collection: {selected_collection_object.name}", fg="green")
+                    save_collection_to_disk(selected_collection_object, no_dir)
+                else:
+                    typer.secho("Collection not found!", fg="red")
+                    raise typer.Exit()
+
+
+def save_collection_to_disk(collection, no_dir: bool):
+    base_dir = Path(os.getcwd())
+
+    if no_dir:
+        collection_dir = base_dir
+    else:
+        collection_dir = base_dir / collection.name
+        collection_dir.mkdir(parents=True, exist_ok=True)
+
+    def write_file(template):
+        file_path = collection_dir / template["file_name"]
+        try:
+            with open(file_path, "w", encoding="utf-8") as f:
+                f.write(template["text"])
+            typer.secho(f"✔ Created file: {file_path}", fg="blue")
+        except IOError as e:
+            typer.secho(f"❌ Failed to write file {file_path}: {e}", fg="red")
+
+    with ThreadPoolExecutor() as executor:
+        executor.map(write_file, collection.templates)
+
+    typer.secho(
+        f"Successfully pulled {collection.name} into {'current directory' if no_dir else collection_dir}",
+        fg="green"
+    )
 
 
 if __name__ == "__main__":

@@ -108,6 +108,3 @@ def list_github_imports():
             progress.stop()
             typer.secho("Unexpected error occurred while fetching GitHub installations.",
                         fg=typer.colors.RED)
-
-
-            
