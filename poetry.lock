@@ -289,6 +289,20 @@ rtd = ["jupyter_sphinx", "mdit-py-plugins", "myst-parser", "pyyaml", "sphinx", "
 testing = ["coverage", "pytest", "pytest-cov", "pytest-regressions"]
 
 [[package]]
+name = "mdformat"
+version = "0.7.22"
+description = "CommonMark compliant Markdown formatter"
+optional = false
+python-versions = ">=3.9"
+files = [
+    {file = "mdformat-0.7.22-py3-none-any.whl", hash = "sha256:61122637c9e1d9be1329054f3fa216559f0d1f722b7919b060a8c2a4ae1850e5"},
+    {file = "mdformat-0.7.22.tar.gz", hash = "sha256:eef84fa8f233d3162734683c2a8a6222227a229b9206872e6139658d99acb1ea"},
+]
+
+[package.dependencies]
+markdown-it-py = ">=1.0.0,<4.0.0"
+
+[[package]]
 name = "mdit-py-plugins"
 version = "0.4.2"
 description = "Collection of plugins for markdown-it-py"
@@ -811,4 +825,4 @@ testing = ["coverage[toml]", "zope.event", "zope.testing"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12"
-content-hash = "ac5e57f93595695ae593bb6dea0ebc62670fd90d7b12daa17ac47484aad201ce"
+content-hash = "20cec4cec875a0e6c401dc9c2892d9ffe7277b0b7e274bd16b64d65ee04c301e"

@@ -17,6 +17,7 @@ questionary = "^2.0.1"
 httpx-cache = "^0.13.0"
 textual = "^0.76.0"
 datetime = "^5.5"
+mdformat = "^0.7.22"
 
 
 [build-system]

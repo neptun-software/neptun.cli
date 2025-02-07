@@ -341,7 +341,6 @@ class ChatService:
             response_data = self.chat_response_converter.parse_response(response=response.text)
 
             return response.text
-
         except ValidationError as ve:
             logging.error(f"Validation error: {ve}")
         except Exception as e:
@@ -582,7 +581,8 @@ class CollectionService:
                 statusMessage=str(e),
             )
 
-    def create_template_collection(self, create_collection_request: CreateCollectionRequest) -> Union[TemplateCollectionResponse, GeneralErrorResponse]:
+    def create_template_collection(self, create_collection_request: CreateCollectionRequest) -> Union[
+        TemplateCollectionResponse, GeneralErrorResponse]:
         authenticated = self._ensure_authenticated()
         if isinstance(authenticated, GeneralErrorResponse):
             return authenticated
@@ -669,7 +669,8 @@ class CollectionService:
         finally:
             self.auth_service.close()
 
-    def update_template_collection(self, collection_uuid: str, update_request: UpdateCollectionRequest) -> Union[TemplateCollectionResponse, GeneralErrorResponse]:
+    def update_template_collection(self, collection_uuid: str, update_request: UpdateCollectionRequest) -> Union[
+        TemplateCollectionResponse, GeneralErrorResponse]:
         authenticated = self._ensure_authenticated()
         if isinstance(authenticated, GeneralErrorResponse):
             return authenticated

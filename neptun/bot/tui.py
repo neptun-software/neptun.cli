@@ -21,7 +21,6 @@ from textual.app import App, ComposeResult
 from textual.widgets import Static
 
 
-
 logging.basicConfig(
     filename='app.log',          # Name of the log file
     filemode='a',                # Mode to open the file ('w' for overwrite, 'a' for append)
@@ -62,6 +61,7 @@ class MessageBox(Widget):
                     yield Markdown(self.markdown_str, id="markdown_box")
         else:
             yield Static(self.text, classes=f"message {self.role}")
+
 
 class IndeterminateProgress(Widget):
     def __init__(self) -> None:

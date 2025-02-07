@@ -8,6 +8,8 @@ import questionary
 import typer
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
+
+from neptun.bot.chat import Conversation
 from neptun.utils.helpers import ChatResponseConverter
 from neptun.utils.managers import ConfigManager
 from neptun.utils.services import ChatService
@@ -23,6 +25,7 @@ assistant_app = typer.Typer(name="Neptun Chatbot", help="Start chatting with the
 console = Console()
 bot = NeptunChatApp()
 chat_service = ChatService()
+conversation = Conversation()
 config_manager = ConfigManager()
 
 
@@ -286,16 +289,6 @@ def create_chat():
     create_new_chat_dialog()
 
 
-@assistant_app.command(name="ask", help="Ask a question to the bot")
-def ask(question: str):
-    response = bot.respond(question)
-    if response.startswith("markdown:"):
-        markdown_content = response[len("markdown:"):].strip()
-        #print_markdown_stream(markdown_content)
-    else:
-        console.print(f"Bot: {response}")
-
-
 @assistant_app.command(name="fetch-files", help="Fetch and display chat-related files.")
 def fetch_chat_files_cli():
     with Progress(
@@ -320,3 +313,7 @@ def fetch_chat_files_cli():
         elif isinstance(result, GeneralErrorResponse):
             typer.secho(f"Error: {result.statusMessage}", fg=typer.colors.RED)
 
+
+@assistant_app.command(name="ask", help="Ask a question to the bot")
+def ask(question: str):
+    asyncio.run(conversation.ask(question))
