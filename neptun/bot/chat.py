@@ -1,5 +1,8 @@
 import asyncio
 import re
+import time
+import mistune
+import typer
 
 from neptun.model.http_requests import ChatRequest, Message
 from rich.console import Console
@@ -8,7 +11,8 @@ from neptun.model.http_responses import ChatMessage, ChatMessagesHttpResponse, E
 from neptun.utils.helpers import ChatResponseConverter
 import httpx
 import logging
-
+from rich.markdown import Markdown
+from rich.live import Live
 # implement chatgpt chat only
 
 logging.basicConfig(
@@ -78,32 +82,45 @@ class Conversation:
         headers = {
             "Content-Type": "application/json",
         }
-        session_cookie = "Fe26.2**d78c6834b5666ada7b76c6c4cc8f88364774df386f48b065b89d1712e0e6e8ce*KY1Zh8aoyX9dkUlMfoiYsg*pWeBbDqdb9z6VOeHPOTzfvOKhOskWuxeF7i3lJg9anoElcHIc24n5J8auQzwPhdzrSkKPxBraB_04lFruSKmz0X5DoDnz1NiPRdalsdJA6nlNKJYdmAJAYE-REHlKLgqli-47NrUo-2v2OBd9bDxhGP8GWZKmMHEBWJ2eqEc0di8-2CoQfw-JmHi5maVoJggvRsbzJ6O7VNPuEYMxejQB2aVRSJiA3XjjeWWEVectg9F2NDUOqqy5JqAqceBQk1maDeFcUMLpBFQfkPIkHkacE8Lkaox6oNW0GuW3zKEMa_rhLihUbNpF3a8L-p8dZrHCCjn7532hxz6cwSxZSCGXn25UfWxURFC-FSjgVsZVm5qneS1qmE9S3W1qLuogyjiYPjnpGvWj4Inds-xWjhi2w**ecb51b5bd889ad1e670e09143d6c5b272e33972cb6ee18e2c1fd7723b636b772*9iHlU0L70qz2ppS5KnrmYFMS2HXHHwvlqJaOO4zM24E"
-        API_URL = "https://neptun-webui.vercel.app/api/ai/huggingface/google/gemma-2-27b-it/chat?chat_id=104"
-        with httpx.Client(cookies={"neptun-session": session_cookie}) as client:
-            with client.stream("POST", API_URL, json=chat_request.model_dump(), headers=headers, timeout=60) as response:
+        chat_id = self.chat_service.config_manager.read_config("active_chat", "chat_id")
+        model = self.chat_service.config_manager.read_config("active_chat", "model")
+        model_publisher, model_name = self.chat_service.extract_parts(model)
+
+        url = f"{self.chat_service.config_manager.read_config('utils', 'neptun_api_server_host')}/ai/huggingface/{model_publisher}/{model_name}/chat?chat_id={chat_id}"
+        full_response = ""
+
+        with self.chat_service.client as client:
+            with client.stream("POST", url, json=chat_request.model_dump(), headers=headers,
+                               timeout=60) as response:
                 if response.status_code == 200:
-                    print("🔄 Streaming response from API...\n")
-                    buffer = ""
+                    with Live("🔄 Streaming response from API...\n", console=self.console, refresh_per_second=10,
+                              transient=True) as live:
+                        buffer = ""
+                        for chunk in response.iter_bytes():
+                            if chunk:
+                                decoded_text = chunk.decode("utf-8", errors="ignore")
+                                buffer += decoded_text
 
-                    for chunk in response.iter_bytes():
-                        if chunk:
-                            decoded_text = chunk.decode("utf-8", errors="ignore")
-                            buffer += decoded_text  # Append chunk to buffer
+                                lines = buffer.split("\n")
+                                buffer = lines.pop()  # Incomplete line
 
-                            lines = buffer.split("\n")
-                            buffer = lines.pop()
+                                for line in lines:
+                                    cleaned_text = self.clean_text(line.strip())
+                                    full_response += cleaned_text
+                                    live.update(full_response)
 
-                            for line in lines:
-                                cleaned_text = self.clean_text(line.strip())  # Strip extra whitespace
-                                print(cleaned_text, end="", flush=True)
+                        if buffer:
+                            cleaned_text = self.clean_text(buffer.strip())
+                            full_response += cleaned_text
+                            live.update(full_response)
 
-                    if buffer:
-                        print(self.clean_text(buffer.strip()), end="", flush=True)
-
+                    # When the Live block exits, the streaming text is automatically cleared.
+                    md = Markdown(full_response.encode('utf-8').decode('unicode_escape'))
+                    self.console.print(md)
                 else:
                     error_preview = next(response.iter_bytes(chunk_size=512)).decode("utf-8", errors="ignore")
-                    print(f"❌ Failed to fetch stream. Status: {response.status_code}, Response: {error_preview}")
+                    self.console.print(
+                        f"❌ Failed to fetch stream. Status: {response.status_code}, Response: {error_preview}")
 
     def clear(self) -> None:
         self.messages = []
@@ -112,15 +129,12 @@ class Conversation:
         await self.fetch_latest_messages()
 
 
-
-
 async def main():
     conversation = Conversation()
 
     result = await conversation.send("Hello world!")
 
     print(result.message)
-
 
 if __name__ == "__main__":
     asyncio.run(main())
