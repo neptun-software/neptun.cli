@@ -243,7 +243,7 @@ class ChatService:
         except ValidationError:
             return GeneralErrorResponse.model_validate(response_data)
 
-    def delete_selected_chat(self, chat_id) -> Union[ChatsHttpResponse, GeneralErrorResponse]:
+    def delete_selected_chat(self, chat_id) -> Union[bool, GeneralErrorResponse]:
         auth_check = self._ensure_authenticated()
         if isinstance(auth_check, GeneralErrorResponse):
             return auth_check
@@ -256,6 +256,8 @@ class ChatService:
         if response.status_code != 200:
             return GeneralErrorResponse(statusCode=response.status_code,
                                         statusMessage="Error occurred while deleting the selected chat.")
+        else:
+            return True
 
     def create_chat(self, create_chat_http_request: CreateChatHttpRequest) \
             -> Union[CreateChatHttpResponse, ErrorResponse, GeneralErrorResponse]:

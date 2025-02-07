@@ -3,7 +3,6 @@ import re
 import time
 import mistune
 import typer
-
 from neptun.model.http_requests import ChatRequest, Message
 from rich.console import Console
 from neptun.utils.services import ChatService
@@ -138,3 +137,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
