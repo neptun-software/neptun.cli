@@ -26,6 +26,7 @@ config_manager = ConfigManager()
 console = Console()
 
 
+@collection_app.command(name="options", help="List all template options available.")
 def options():
     choice = questionary.select(
         "Choose an available function:",
@@ -39,7 +40,7 @@ def options():
     match choice:
         case "Create Collection()":
             create_template_collection()
-        case "List Collection()":
+        case "List Collections()":
             list_template_collections()
         case "Delete Collection()":
             delete_template_collection()
@@ -49,11 +50,6 @@ def options():
             update_template_collection()
         case "Pull Collection()":
             pull_template_collection()
-
-
-@collection_app.command(name="options", help="List all template options available.")
-def list_template_options():
-    options()
 
 
 @collection_app.command(name="create-empty", help="Create a new template collection.")
@@ -271,7 +267,7 @@ def update_template_collection(limit: int = None, select_last: bool = False):
         typer.secho(f"Updating collection: {name}...", fg=typer.colors.BRIGHT_BLACK)
 
         response = collection_service.update_template_collection(
-            collection_uuid=selected_collection_object.share_uuid,
+            id=selected_collection_object.id,
             update_request=update_collection_request)
 
         if isinstance(response, GeneralErrorResponse):

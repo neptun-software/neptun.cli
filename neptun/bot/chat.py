@@ -81,7 +81,7 @@ class Conversation:
         model = self.chat_service.config_manager.read_config("active_chat", "model")
         model_publisher, model_name = self.chat_service.extract_parts(model)
 
-        url = f"{self.chat_service.config_manager.read_config('utils', 'neptun_api_server_host')}/ai/huggingface/{model_publisher}/{model_name}/chat?chat_id={chat_id}&is_playground=true"
+        url = f"{self.chat_service.config_manager.read_config('utils', 'neptun_api_server_host')}/ai/huggingface/{model_publisher}/{model_name}/chat?chat_id={chat_id}&is_playground=false"
         full_response = ""
 
         with self.chat_service.client as client:

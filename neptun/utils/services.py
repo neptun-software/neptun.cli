@@ -671,14 +671,14 @@ class CollectionService:
         finally:
             self.auth_service.close()
 
-    def update_template_collection(self, collection_uuid: str, update_request: UpdateCollectionRequest) -> Union[
+    def update_template_collection(self, id: int, update_request: UpdateCollectionRequest) -> Union[
         TemplateCollectionResponse, GeneralErrorResponse]:
         authenticated = self._ensure_authenticated()
         if isinstance(authenticated, GeneralErrorResponse):
             return authenticated
 
         user_id = int(self.config_manager.read_config("auth.user", "id"))
-        url = f"{self.config_manager.read_config('utils', 'neptun_api_server_host')}/users/{user_id}/collections/{collection_uuid}"
+        url = f"{self.config_manager.read_config('utils', 'neptun_api_server_host')}/users/{user_id}/collections/{id}"
 
         try:
             response = self.client.patch(
