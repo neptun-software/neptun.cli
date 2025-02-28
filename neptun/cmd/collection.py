@@ -178,7 +178,7 @@ def delete_template_collection(limit: int = None, select_last: bool = False):
                 deleting_data_task = progress.add_task(description="Deleting selected collection...", total=None)
 
                 deleted_collection = collection_service.delete_template_collection(
-                    selected_collection_object.share_uuid)
+                    selected_collection_object.id)
                 if deleted_collection is True:
                     progress.update(deleting_data_task, completed=True, visible=False)
                     progress.stop()
@@ -391,11 +391,9 @@ def process_file(readable_file, latest_collection):
         )
 
         create_template_result = template_service.create_template(
-            collection_uuid=latest_collection.share_uuid,
+            collection_id=latest_collection.id,
             create_template_request=create_template_request,
         )
-
-        print(create_template_result)
 
         if isinstance(create_template_result, Template):
             typer.secho(f"Template '{create_template_result.file_name}' created successfully!", fg=typer.colors.GREEN)

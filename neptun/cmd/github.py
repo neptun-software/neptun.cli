@@ -108,3 +108,15 @@ def list_github_imports():
             progress.stop()
             typer.secho("Unexpected error occurred while fetching GitHub installations.",
                         fg=typer.colors.RED)
+
+
+@github_app.command(name="uninstall",
+                    help="Uninstall the official neptun-github-application onto a repository.")
+def install_github_app():
+    github_app_url = config_manager.read_config('utils', 'neptun_github_app_url')
+    try:
+        chrome = webbrowser.get('chrome')
+        chrome.open(github_app_url)
+        console.print(f"Successfully launched chrome. You are ready to install the neptun-github-application!\nYou can find the installed application here: https://neptun-webui.vercel.app/account")
+    except webbrowser.Error:
+        typer.secho("Seems like chrome is not installed on your system.\nTo manually add the github-application, please visit: https://github.com/apps/neptun-github-app/installations", fg=typer.colors.RED)

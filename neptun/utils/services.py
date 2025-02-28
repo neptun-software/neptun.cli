@@ -493,13 +493,13 @@ class TemplateService:
                 statusMessage=str(e),
             )
 
-    def create_template(self, collection_uuid: str, create_template_request: CreateTemplateRequest) -> None | GeneralErrorResponse | ErrorResponse | Template:
+    def create_template(self, collection_id: int, create_template_request: CreateTemplateRequest) -> None | GeneralErrorResponse | ErrorResponse | Template:
         authenticated = self._ensure_authenticated()
         if isinstance(authenticated, GeneralErrorResponse):
             return authenticated
 
         user_id = int(self.config_manager.read_config("auth.user", "id"))
-        url = f"{self.config_manager.read_config('utils', 'neptun_api_server_host')}/users/{user_id}/collections/{collection_uuid}/templates"
+        url = f"{self.config_manager.read_config('utils', 'neptun_api_server_host')}/users/{user_id}/collections/{collection_id}/templates"
 
         try:
             print(create_template_request.model_dump())
@@ -642,13 +642,13 @@ class CollectionService:
                 statusMessage=f"Server error: {str(e)}",
             )
 
-    def delete_template_collection(self, collection_uuid: str) -> Union[bool, GeneralErrorResponse]:
+    def delete_template_collection(self, collection_id: int) -> Union[bool, GeneralErrorResponse]:
         authenticated = self._ensure_authenticated()
         if isinstance(authenticated, GeneralErrorResponse):
             return authenticated
 
         user_id = int(self.config_manager.read_config("auth.user", "id"))
-        url = f"{self.config_manager.read_config('utils', 'neptun_api_server_host')}/users/{user_id}/collections/{collection_uuid}"
+        url = f"{self.config_manager.read_config('utils', 'neptun_api_server_host')}/users/{user_id}/collections/{collection_id}"
 
         try:
             response = self.client.delete(url)
