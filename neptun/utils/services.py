@@ -493,8 +493,7 @@ class TemplateService:
                 statusMessage=str(e),
             )
 
-    def create_template(self, collection_uuid: str, create_template_request: CreateTemplateRequest) -> Union[
-        Template, ErrorResponse]:
+    def create_template(self, collection_uuid: str, create_template_request: CreateTemplateRequest) -> None | GeneralErrorResponse | ErrorResponse | Template:
         authenticated = self._ensure_authenticated()
         if isinstance(authenticated, GeneralErrorResponse):
             return authenticated
@@ -503,7 +502,8 @@ class TemplateService:
         url = f"{self.config_manager.read_config('utils', 'neptun_api_server_host')}/users/{user_id}/collections/{collection_uuid}/templates"
 
         try:
-            response = self.client.post(url, json=create_template_request.dict())
+            print(create_template_request.model_dump())
+            response = self.client.post(url, json=create_template_request.model_dump())
 
             if response.status_code == 400:
                 return ErrorResponse(
@@ -538,7 +538,7 @@ class TemplateService:
                     template_response = Template.model_validate(response_data)
                     return template_response
                 except ValidationError:
-                    return ErrorResponse.parse_obj(response_data)
+                    return ErrorResponse.model_validate(response_data)
 
         except httpx.HTTPStatusError as http_error:
             return GeneralErrorResponse(

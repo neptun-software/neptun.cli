@@ -395,6 +395,8 @@ def process_file(readable_file, latest_collection):
             create_template_request=create_template_request,
         )
 
+        print(create_template_result)
+
         if isinstance(create_template_result, Template):
             typer.secho(f"Template '{create_template_result.file_name}' created successfully!", fg=typer.colors.GREEN)
             typer.echo(readable_file.extension)
@@ -466,6 +468,7 @@ def auto_create_template_collection(directory: str = typer.Argument(".", help="D
 
             readable_files = get_readable_files_in_directory(directory,
                                                              int(config_manager.read_config('auth.user', 'id')))
+
             with ThreadPoolExecutor() as executor:
                 futures = [
                     executor.submit(process_file, readable_file, latest_collection)
@@ -476,6 +479,7 @@ def auto_create_template_collection(directory: str = typer.Argument(".", help="D
                     pass
 
             typer.secho(f"Finished appending templates to {latest_collection.name}!", fg=typer.colors.GREEN)
+
             template_service.close()
 
         elif isinstance(result, GeneralErrorResponse):
@@ -487,7 +491,6 @@ def pull_template_collection(limit: int = None,
                              select_last: bool = False,
                              no_dir: bool = typer.Option(False, "--no-dir",
                                                          help="Place files directly in the current directory without creating a collection folder.")
-
                              ):
     with Progress(
             SpinnerColumn(),
