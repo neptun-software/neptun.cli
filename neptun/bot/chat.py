@@ -70,10 +70,6 @@ class Conversation:
             logging.error(f"Error sending message: {e}")
             return None
 
-    def clean_text(self, line):
-        match = re.match(r'0:"(.*)"', line)
-        return match.group(1) if match else line
-
     async def ask(self, message):
         self.messages.append(Message(role="user", content=message))
 
@@ -85,7 +81,7 @@ class Conversation:
         model = self.chat_service.config_manager.read_config("active_chat", "model")
         model_publisher, model_name = self.chat_service.extract_parts(model)
 
-        url = f"{self.chat_service.config_manager.read_config('utils', 'neptun_api_server_host')}/ai/huggingface/{model_publisher}/{model_name}/chat?chat_id={chat_id}"
+        url = f"{self.chat_service.config_manager.read_config('utils', 'neptun_api_server_host')}/ai/huggingface/{model_publisher}/{model_name}/chat?chat_id={chat_id}&is_playground=true"
         full_response = ""
 
         with self.chat_service.client as client:
@@ -104,12 +100,12 @@ class Conversation:
                                 buffer = lines.pop()  # Incomplete line
 
                                 for line in lines:
-                                    cleaned_text = self.clean_text(line.strip())
+                                    cleaned_text = self.chat_response_converter.clean_line(line.strip())
                                     full_response += cleaned_text
                                     live.update(full_response)
 
                         if buffer:
-                            cleaned_text = self.clean_text(buffer.strip())
+                            cleaned_text = self.chat_response_converter.clean_line(buffer.strip())
                             full_response += cleaned_text
                             live.update(full_response)
 

@@ -13,6 +13,7 @@ MessageBox {
     layout: horizontal;
     height: auto;
     align-horizontal: center;
+
 }
 
 .message {
@@ -26,7 +27,6 @@ MessageBox {
     box-sizing: border-box;
     color: #d9e3f3;
 }
-
 
 .info {
     border: #e5e7a0 tall;
@@ -70,10 +70,7 @@ MessageBox {
     overflow-y: auto;
 }
 
-.scrollable {
-    height: auto;
-    overflow-y: auto;
-}
+
 
 Scrollbar{
         background: #d9e3f3;

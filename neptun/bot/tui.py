@@ -4,6 +4,7 @@ from textual.await_complete import AwaitComplete
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from textual.app import App, ComposeResult
 from textual.binding import Binding
+from textual.reactive import reactive
 from textual.containers import Horizontal, Container
 from textual.widgets import Footer, Header, Input, Button, Static
 from textual.widget import Widget
@@ -20,6 +21,10 @@ from rich.progress import Progress, BarColumn
 from textual.app import App, ComposeResult
 from textual.widgets import Static
 
+from neptun.model.http_requests import Message, ChatRequest
+from neptun.utils.helpers import ChatResponseConverter
+from neptun.utils.managers import ConfigManager
+from neptun.utils.services import ChatService
 
 logging.basicConfig(
     filename='app.log',          # Name of the log file
@@ -46,21 +51,38 @@ class SpinnerWidget(Static):
 
 
 class MessageBox(Widget):
+    text = reactive("", recompose=True)
+    markdown = reactive("", recompose=True)
+
     def __init__(self, text: str, role: str, markdown_str: str = "") -> None:
         super().__init__()
         self.text = text
         self.markdown_str = markdown_str
         self.role = role
+        self.text_box = None  # ✅ Store reference to avoid query issues
 
     def compose(self) -> ComposeResult:
         if self.markdown_str:
             with Widget(classes=f"message {self.role}"):
-                yield Static(self.text)
+                self.text_box = Static(self.text, id="text_box")  # ✅ Save reference
+                yield Static(self.text, id="text_box")
 
                 if self.markdown_str:
                     yield Markdown(self.markdown_str, id="markdown_box")
         else:
             yield Static(self.text, classes=f"message {self.role}")
+
+    def watch_text(self, old_value: str, new_value: str):
+        if self.text_box:
+            self.text_box.update(new_value)
+
+    def watch_markdown_str(self, old_value: str, new_value: str):
+        if new_value:
+            self.query_one("#markdown_box", Markdown).update(new_value)
+
+    async def update_text(self, new_text: str) -> None:
+        self.text = new_text
+        self.refresh()
 
 
 class IndeterminateProgress(Widget):
@@ -88,6 +110,10 @@ class NeptunChatApp(App):
     CSS_PATH = Path(__file__).parent / "static" / "style.css"
 
     def on_mount(self) -> None:
+        self.chat_response_converter = ChatResponseConverter()
+        self.messages: list[Message] = []
+        self.chat_service = ChatService()
+        config_manager = ConfigManager()
         self.conversation = Conversation()
         self.query_one("#message_input", Input).focus()
         self.call_later(self.list_existing_chats)
@@ -134,6 +160,9 @@ class NeptunChatApp(App):
                 )
             )
 
+    async def on_unmount(self) -> None:
+        await self.chat_service.async_client.aclose()
+
     async def process_conversation(self) -> None:
         message_input = self.query_one("#message_input", Input)
         button = self.query_one("#send_button", Button)
@@ -150,21 +179,63 @@ class NeptunChatApp(App):
         conversation_box.scroll_end(animate=True)
 
         logging.debug(f"User message: {user_message}")
+        self.messages.append(Message(role="user", content=user_message))
 
         with message_input.prevent(Input.Changed):
             message_input.value = ""
 
         try:
-            result = await self.conversation.send(user_message)
+            chat_request = ChatRequest(messages=self.messages)
+            headers = {
+                "Content-Type": "application/json",
+            }
+            chat_id = self.chat_service.config_manager.read_config("active_chat", "chat_id")
+            model = self.chat_service.config_manager.read_config("active_chat", "model")
+            model_publisher, model_name = self.chat_service.extract_parts(model)
 
-            logging.debug(f"API response: {result}")
+            url = f"{self.chat_service.config_manager.read_config('utils', 'neptun_api_server_host')}/ai/huggingface/{model_publisher}/{model_name}/chat?chat_id={chat_id}"
+            full_response = ""
+            client = self.chat_service.async_client
+            async with client.stream(
+                    "POST",
+                    url,
+                    json=chat_request.model_dump(),
+                    headers=headers,
+                    timeout=60
+            ) as response:
+                if response.status_code == 200:
+                    buffer = ""
+                    assistant_message_box = MessageBox("", "assistant")
+                    await conversation_box.mount(assistant_message_box)
+                    async for chunk in response.aiter_bytes():
+                        if chunk:
+                            decoded_text = chunk.decode("utf-8", errors="ignore")
+                            buffer += decoded_text
+                            conversation_box.scroll_end(animate=True)
 
-            if result:
-                await conversation_box.mount(
-                    MessageBox(role="assistant", text=result.content)
-                )
-            else:
-                logging.error("No result returned from conversation.send()")
+                            lines = buffer.split("\n")
+                            buffer = lines.pop()
+
+                            for line in lines:
+                                cleaned_text = self.chat_response_converter.clean_line(line.strip())
+                                """
+                                await conversation_box.mount(
+                                    MessageBox(full_response, "assistant")
+                                )
+                                """
+                                full_response += cleaned_text
+                                #await assistant_message_box.update_text(cleaned_text)
+                                conversation_box.scroll_end(animate=True)
+                    if buffer:
+                        cleaned_text = self.chat_response_converter.clean_line(buffer.strip())
+                        full_response += cleaned_text
+                else:
+                    # Handle non-200 responses
+                    error_content = await response.aread()
+                    await conversation_box.mount(
+                        MessageBox(f"API Error: {response.status_code}\n{error_content}", "error")
+                    )
+
         except Exception as e:
             logging.error(f"Error in conversation: {e}")
             logging.error("Exception details:\n" + traceback.format_exc())

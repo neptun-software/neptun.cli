@@ -212,7 +212,7 @@ def delete_selected_chat_dialog():
 
         result = chat_service.get_available_ai_chats()
         chat_dict = {f"{chat.id}: {chat.name}:[{chat.model}]": chat for chat in result.chats}
-        chat_choices = [f"{chat.id}: {chat.name}:[{chat.model}]" for chat in result.chats[:5]]
+        chat_choices = [f"{chat.id}: {chat.name}:[{chat.model}]" for chat in result.chats]
 
         if isinstance(result, ChatsHttpResponse):
             progress.update(collecting_data_task, completed=True, visible=False)
@@ -266,6 +266,8 @@ def options():
             list_available_chats()
         case "Delete Chat()":
             delete_selected_chat_dialog()
+        case "Select Chat()":
+            select_chat_dialog()
 
 
 @assistant_app.command(name="list", help="List all available ai chat-dialogs.")
@@ -287,6 +289,50 @@ def delete_chat():
 @assistant_app.command(name="create", help="Create a new chat-dialog.")
 def create_chat():
     create_new_chat_dialog()
+
+
+@assistant_app.command(name="select", help="Select a chat-dialog.")
+def select_chat_dialog():
+    with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            transient=True,
+    ) as progress:
+        progress.add_task(description="Collecting available chats...",
+                          total=None)
+
+        result = chat_service.get_available_ai_chats()
+
+        if isinstance(result, ChatsHttpResponse):
+            chat_dict = {f"{chat.id}: {chat.name}:[{chat.model}]": chat for chat in result.chats}
+            chat_choices = [f"{chat.id}: {chat.name}:[{chat.model}]" for chat in result.chats[:5]]
+
+            progress.stop()
+
+            if result.chats is not None and len(result.chats) > 0:
+                action = questionary.select(
+                    message="Select an available chat:",
+                    choices=chat_choices
+                ).ask()
+
+                if action is None:
+                    raise typer.Exit()
+
+                selected_chat_object = chat_dict.get(action)
+
+                config_manager.update_active_chat(id=selected_chat_object.id,
+                                                  name=selected_chat_object.name,
+                                                  model=selected_chat_object.model)
+
+                typer.secho(f"Successfully selected: {selected_chat_object.name}!",
+                            fg=typer.colors.GREEN)
+            else:
+                typer.secho(f"No chats available!",
+                            fg=typer.colors.BRIGHT_YELLOW)
+
+        elif isinstance(result, GeneralErrorResponse):
+            typer.secho(f"{result.statusMessage}",
+                        fg=typer.colors.RED)
 
 
 @assistant_app.command(name="fetch-files", help="Fetch and display chat-related files.")

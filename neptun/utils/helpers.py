@@ -56,9 +56,9 @@ class ChatResponseConverter:
         return formatted_text
 
     @staticmethod
-    def clean_chunk(chunk: str) -> str:
-        match = re.match(r'0:"(.*)"', chunk)
-        return match.group(1) if match else chunk
+    def clean_line(line):
+        match = re.match(r'0:"(.*)"', line)
+        return match.group(1) if match else line
 
 
 # Example usage
