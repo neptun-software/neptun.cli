@@ -1,10 +1,15 @@
 [tool.poetry]
 name = "neptun"
-version = "0.1.1"
+version = "0.1.4"
 description = "A CLI-Interface build with python which is compatible with tethe Neptun-web-application and alloows a seemsless automatic generation of deployment scripts based on the provided folder structure."
 authors = ["stevan06v"]
 license = "The Unlicense"
 readme = "README.md"
+
+include = [
+    "neptun/config/default.json",
+    "neptun/config/config.ini"
+]
 
 [tool.poetry.dependencies]
 python = "^3.12"

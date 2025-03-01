@@ -1,4 +1,5 @@
 import configparser
+import importlib.resources
 import logging
 import os
 from functools import wraps
@@ -8,12 +9,27 @@ from neptun.model.responses import ConfigResponse
 from neptun import SUCCESS, CONFIG_KEY_NOT_FOUND_ERROR, __app_name__, DIR_ERROR, FILE_ERROR
 import json
 
+logging.basicConfig(
+    filename='app.log',
+    filemode='a',
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    level=logging.DEBUG
+)
+
 
 CONFIG_DIR_PATH = Path(typer.get_app_dir(__app_name__))
+logging.info(f"Config dir: {CONFIG_DIR_PATH}")
 CONFIG_FILE_PATH = CONFIG_DIR_PATH / "config/config.ini"
 DEFAULT_CONFIG_FILE_PATH = CONFIG_DIR_PATH / "config/default.json"
 
-DEFAULT_CONFIG = json.load(open(Path(DEFAULT_CONFIG_FILE_PATH))) if Path(DEFAULT_CONFIG_FILE_PATH).exists() else None
+default_json_path = importlib.resources.path('neptun.config', 'default.json')
+print(default_json_path)
+
+try:
+    with importlib.resources.open_text('neptun.config', 'default.json') as f:
+        DEFAULT_CONFIG = json.load(f)
+except FileNotFoundError:
+    DEFAULT_CONFIG = None
 
 
 def singleton(cls):
@@ -42,7 +58,6 @@ class ConfigManager:
         self.config_file_path = config_file_path
         self.config = configparser.ConfigParser()
         self._ensure_config_file_exists()
-        logging.log(msg=f"{str(CONFIG_DIR_PATH)}", level=logging.INFO)
 
     def set_config_file_path(self, path: str):
         self.config_file_path = path
@@ -60,6 +75,7 @@ class ConfigManager:
         """Write the default configuration to the file."""
         with open(self.config_file_path, 'w') as configfile:
             self._write_section(configfile, "", config_file_path)
+        logging.info(f"Writing complete!")
 
     def write_provided_custom_config(self, path: str):
         """Write the provided configuration to the file."""
@@ -80,9 +96,14 @@ class ConfigManager:
         """Ensure the configuration directory and file exist."""
         if not CONFIG_DIR_PATH.exists():
             CONFIG_DIR_PATH.mkdir(parents=True, exist_ok=True)
+        if not CONFIG_FILE_PATH.parent.exists():
+            CONFIG_FILE_PATH.parent.mkdir(parents=True, exist_ok=True)
         if not CONFIG_FILE_PATH.exists():
             CONFIG_FILE_PATH.touch()
             self._write_default_config()
+        else:
+            if os.stat(CONFIG_FILE_PATH).st_size == 0:
+                self._write_default_config()
 
     @ensure_latest_config
     def read_config(self, section: str, key: str) -> str:
@@ -202,7 +223,6 @@ class ConfigManager:
 if __name__ == "__main__":
 
     config_manager_ini = ConfigManager()
-
     config_manager_ini.update_config_dynamically("auth.user.id=penis")
 
     config_manager_ini.list_sections()
