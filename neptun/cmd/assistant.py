@@ -402,3 +402,8 @@ def update_chat():
                 f"Successfully updated chat to '{response.chat.name}' with model '{response.chat.model}'.",
                 fg=typer.colors.GREEN
             )
+
+
+@assistant_app.command(name="ask", help="Ask a question to the bot")
+def ask(question: str):
+    asyncio.run(conversation.ask(question))
