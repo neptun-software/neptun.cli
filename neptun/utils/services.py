@@ -7,13 +7,13 @@ from neptun.utils.exceptions import AuthenticationError
 from neptun.utils.managers import ConfigManager
 from neptun.model.http_requests import SignUpHttpRequest, LoginHttpRequest, CreateChatHttpRequest, ChatRequest, \
     OTPCreateRequest, ResetPasswordRequest, CreateCollectionRequest, CreateTemplateRequest, Template, \
-    UpdateCollectionRequest
+    UpdateCollectionRequest, UpdateChatRequest
 from neptun.model.http_responses import SignUpHttpResponse, GeneralErrorResponse, ErrorResponse, LoginHttpResponse, \
     ChatsHttpResponse, CreateChatHttpResponse, ChatMessagesHttpResponse, GithubAppInstallation, \
     GithubAppInstallationHttpResponse, GetInstallationsError, \
     GithubRepositoryHttpResponse, GetImportsError, GithubRepository, OTPResponse, ResetPasswordResponse, \
     AuthenticationErrorResponse, HealthCheckResponse, GetChatFilesResponse, TemplateCollectionResponse, \
-    TemplateCollection, GetSharedCollectionsResponse
+    TemplateCollection, GetSharedCollectionsResponse, UpdateChatResponse
 from neptun.utils.exceptions import NotAuthenticatedError
 from neptun.utils.helpers import ChatResponseConverter
 import logging
@@ -259,18 +259,31 @@ class ChatService:
         else:
             return True
 
-    def create_chat(self, create_chat_http_request: CreateChatHttpRequest) \
-            -> Union[CreateChatHttpResponse, ErrorResponse, GeneralErrorResponse]:
-
-        # Ensure the user is authenticated before proceeding
+    def update_chat(self, chat_id: int, name: str, model: str) -> Union[UpdateChatResponse, GeneralErrorResponse]:
         auth_check = self._ensure_authenticated()
         if isinstance(auth_check, GeneralErrorResponse):
             return auth_check
 
-        # Fetch user ID from configuration
+        user_id = int(self.config_manager.read_config("auth", "user_id"))
+        url = f"{self.config_manager.read_config('utils', 'neptun_api_server_host')}/users/{user_id}/chats/{chat_id}"
+
+        payload = UpdateChatRequest(name=name, model=model).dict()
+
+        response = self.client.patch(url, json=payload)
+        if response.status_code != 200:
+            return GeneralErrorResponse(statusCode=response.status_code, statusMessage=response.text)
+
+        return UpdateChatResponse(**response.json())
+
+    def create_chat(self, create_chat_http_request: CreateChatHttpRequest) \
+            -> Union[CreateChatHttpResponse, ErrorResponse, GeneralErrorResponse]:
+
+        auth_check = self._ensure_authenticated()
+        if isinstance(auth_check, GeneralErrorResponse):
+            return auth_check
+
         id = self.config_manager.read_config("auth.user", "id")
 
-        # Construct the URL for creating a new chat
         url = f"{self.config_manager.read_config('utils', 'neptun_api_server_host')}/users/{id}/chats"
 
         try:
@@ -502,7 +515,6 @@ class TemplateService:
         url = f"{self.config_manager.read_config('utils', 'neptun_api_server_host')}/users/{user_id}/collections/{collection_id}/templates"
 
         try:
-            print(create_template_request.model_dump())
             response = self.client.post(url, json=create_template_request.model_dump())
 
             if response.status_code == 400:

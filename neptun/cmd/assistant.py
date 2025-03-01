@@ -6,6 +6,7 @@ import re
 import httpx
 import questionary
 import typer
+from pydantic_core._pydantic_core import ValidationError
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
@@ -254,7 +255,7 @@ def chat():
 def options():
     choice = questionary.select(
         "Choose an available function:",
-        choices=["Enter Chat()", "New Chat()", "List Chats()", "Delete Chat()"],
+        choices=["Enter Chat()", "New Chat()", "List Chats()", "Delete Chat()", "Select Chat()"],
     ).ask()
 
     match choice:
@@ -335,31 +336,69 @@ def select_chat_dialog():
                         fg=typer.colors.RED)
 
 
-@assistant_app.command(name="fetch-files", help="Fetch and display chat-related files.")
-def fetch_chat_files_cli():
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        transient=True,
-    ) as progress:
-        task = progress.add_task(description="Fetching chat files...", total=None)
+@assistant_app.command(name="update", help="Update an existing chat.")
+def update_chat():
+    with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), transient=True) as progress:
+        collecting_task = progress.add_task("Fetching available chats...", total=None)
 
-        result = chat_service.get_chat_files()
+        result = chat_service.get_available_ai_chats()
 
-        progress.stop()
-        if isinstance(result, ChatsHttpResponse):
-            table = Table(title="Chat Files")
-            table.add_column("Name", justify="left", no_wrap=True)
-            table.add_column("Path", justify="left", no_wrap=True)
+        if isinstance(result, GeneralErrorResponse):
+            typer.secho(f"Error fetching chats: {result.statusMessage}", fg=typer.colors.RED)
+            return
 
-            for chat_file in result.chat_files:
-                table.add_row(chat_file.name, chat_file.path)
+        try:
+            chat_response = ChatsHttpResponse.model_validate(result)
+            chats = chat_response.chats
+        except ValidationError:
+            typer.secho("Error parsing chat response!", fg=typer.colors.RED)
+            return
 
-            console.print(table)
-        elif isinstance(result, GeneralErrorResponse):
-            typer.secho(f"Error: {result.statusMessage}", fg=typer.colors.RED)
+        progress.update(collecting_task, completed=True, visible=False)
 
+        if not chats:
+            typer.secho("No chats available!", fg=typer.colors.BRIGHT_YELLOW)
+            return
 
-@assistant_app.command(name="ask", help="Ask a question to the bot")
-def ask(question: str):
-    asyncio.run(conversation.ask(question))
+        chat_dict = {f"{chat.name}": chat for chat in chats}
+
+        action = questionary.select(
+            message="Select a chat to update:",
+            choices=list(chat_dict.keys())
+        ).ask()
+
+        selected_chat = chat_dict.get(action)
+
+        if not selected_chat:
+            typer.secho("Invalid selection.", fg=typer.colors.RED)
+            return
+
+        # Ask if the user wants to update the name
+        should_update_name = questionary.select(
+            "Would you like to update the chat name?",
+            choices=["Yes", "No"]
+        ).ask()
+
+        new_name = questionary.text(
+            "Enter new chat name:").ask() if should_update_name == "Yes" else selected_chat.name
+
+        # Ask if the user wants to update the model
+        should_update_model = questionary.select(
+            "Would you like to update the chat model?",
+            choices=["Yes", "No"]
+        ).ask()
+
+        new_model = questionary.text(
+            "Enter new model:").ask() if should_update_model == "Yes" else selected_chat.model
+
+        typer.secho(f"Updating chat '{selected_chat.name}'...", fg=typer.colors.BRIGHT_BLACK)
+
+        response = chat_service.update_chat(selected_chat.id, new_name, new_model)
+
+        if isinstance(response, GeneralErrorResponse):
+            typer.secho(f"Failed to update chat: {response.statusMessage}", fg=typer.colors.RED)
+        else:
+            typer.secho(
+                f"Successfully updated chat to '{response.chat.name}' with model '{response.chat.model}'.",
+                fg=typer.colors.GREEN
+            )

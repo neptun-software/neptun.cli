@@ -437,7 +437,6 @@ def process_file(readable_file, latest_collection):
 
         if isinstance(create_template_result, Template):
             typer.secho(f"Template '{create_template_result.file_name}' created successfully!", fg=typer.colors.GREEN)
-            typer.echo(readable_file.extension)
         elif isinstance(create_template_result, GeneralErrorResponse):
             typer.secho(
                 f"Error: {create_template_result.statusMessage} (Status Code: {create_template_result.statusCode})",

@@ -88,3 +88,8 @@ class UpdateCollectionRequest(BaseModel):
     description: Optional[str]
     is_shared: Optional[bool]
     neptun_user_id: int
+
+
+class UpdateChatRequest(BaseModel):
+    name: str
+    model: str

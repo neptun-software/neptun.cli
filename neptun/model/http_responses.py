@@ -54,6 +54,10 @@ class Chat(BaseModel):
     neptun_user_id: Optional[int]
 
 
+class UpdateChatResponse(BaseModel):
+    chat: Chat
+
+
 class ChatsHttpResponse(BaseModel):
     chats: Optional[List[Chat]]
 
