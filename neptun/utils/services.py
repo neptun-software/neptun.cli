@@ -13,7 +13,7 @@ from neptun.model.http_responses import SignUpHttpResponse, GeneralErrorResponse
     GithubAppInstallationHttpResponse, GetInstallationsError, \
     GithubRepositoryHttpResponse, GetImportsError, GithubRepository, OTPResponse, ResetPasswordResponse, \
     AuthenticationErrorResponse, HealthCheckResponse, GetChatFilesResponse, TemplateCollectionResponse, \
-    TemplateCollection
+    TemplateCollection, GetSharedCollectionsResponse
 from neptun.utils.exceptions import NotAuthenticatedError
 from neptun.utils.helpers import ChatResponseConverter
 import logging
@@ -552,6 +552,34 @@ class TemplateService:
                 statusMessage=f"An unexpected error occurred: {str(e)}",
             )
 
+    def delete_template(self, collection_id: int, template_id: int) -> Union[bool, GeneralErrorResponse]:
+        authenticated = self._ensure_authenticated()
+        if isinstance(authenticated, GeneralErrorResponse):
+            return authenticated
+
+        user_id = int(self.config_manager.read_config("auth.user", "id"))
+        url = (
+            f"{self.config_manager.read_config('utils', 'neptun_api_server_host')}"
+            f"/users/{user_id}/collections/{collection_id}/templates/{template_id}"
+        )
+        try:
+            response = self.client.delete(url, headers={"Accept": "application/json"})
+            if response.status_code == 200:
+                return True
+            elif response.status_code == 404:
+                return GeneralErrorResponse(statusCode=404, statusMessage="Template not found")
+            elif response.status_code == 401:
+                return GeneralErrorResponse(statusCode=401,
+                                            statusMessage="Unauthorized. Invalid or missing session cookie.")
+            elif response.status_code == 403:
+                return GeneralErrorResponse(statusCode=403, statusMessage="Forbidden. User ID mismatch.")
+            elif response.status_code == 500:
+                return GeneralErrorResponse(statusCode=500, statusMessage="Server error.")
+            else:
+                return GeneralErrorResponse(statusCode=response.status_code, statusMessage=response.text)
+        except httpx.RequestError as e:
+            return GeneralErrorResponse(statusCode=500, statusMessage=f"Server error: {str(e)}")
+
 
 @singleton
 class CollectionService:
@@ -709,6 +737,31 @@ class CollectionService:
             return GeneralErrorResponse(
                 statusCode=500,
                 statusMessage=f"Server error: {str(e)}",
+            )
+
+    def get_shared_collections(self) -> Union[GetSharedCollectionsResponse, GeneralErrorResponse]:
+        authenticated = self._ensure_authenticated()
+        if isinstance(authenticated, GeneralErrorResponse):
+            return authenticated
+
+        url = f"{self.config_manager.read_config('utils', 'neptun_api_server_host')}/shared/collections"
+        try:
+            response = self.client.get(
+                url,
+                headers={"Accept": "application/json"}
+            )
+            if response.status_code == 200:
+                response_data = response.json()
+                return GetSharedCollectionsResponse(**response_data)
+            else:
+                return GeneralErrorResponse(
+                    statusCode=response.status_code,
+                    statusMessage=f"Failed to retrieve shared collections: {response.text}"
+                )
+        except httpx.RequestError as e:
+            return GeneralErrorResponse(
+                statusCode=500,
+                statusMessage=f"Server error: {str(e)}"
             )
 
 

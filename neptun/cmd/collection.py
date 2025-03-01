@@ -141,6 +141,46 @@ def list_template_collections(limit: int = None, select_last: bool = False):
         console.print(table)
 
 
+@collection_app.command(name="list-shared", help="List all shared template collections.")
+def list_shared_template_collections(
+    limit: int = typer.Option(None, "--limit", "-l", help="Limit the number of shared collections displayed"),
+    select_last: bool = typer.Option(False, "--select-last", "-s", help="Display the last shared collections instead of the first ones")
+):
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        transient=True,
+    ) as progress:
+        progress.add_task(description="Fetching shared template collections...", total=None)
+        shared_response = collection_service.get_shared_collections()
+        progress.stop()
+
+        if isinstance(shared_response, GeneralErrorResponse):
+            console.print(f"[bold red]Error: {shared_response.statusMessage}[/bold red]")
+            return
+
+        table = Table()
+        table.add_column("Name", justify="left", style="magenta", no_wrap=True)
+        table.add_column("Description", justify="left")
+        table.add_column("Shared", justify="center", style="green", no_wrap=True)
+        table.add_column("Shared-UUID", justify="center", style="green", no_wrap=True)
+
+        if select_last:
+            collections_to_display = shared_response.collections[-limit:] if limit else shared_response.collections[-1:]
+        else:
+            collections_to_display = shared_response.collections[:limit] if limit else shared_response.collections
+
+        for collection in collections_to_display:
+            table.add_row(
+                collection.name,
+                collection.description or "No description",
+                "Yes" if collection.is_shared else "No",
+                collection.share_uuid,
+            )
+
+        console.print(table)
+
+
 @collection_app.command(name="delete", help="Delete a template collection.")
 def delete_template_collection(limit: int = None, select_last: bool = False):
     with Progress(

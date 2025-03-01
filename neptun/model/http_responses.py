@@ -198,3 +198,14 @@ class CreateTemplateResponse(BaseModel):
 
 class TemplateCollectionResponse(BaseModel):
     collections: list[TemplateCollection]
+
+
+class GetSharedCollectionsResponse(BaseModel):
+    collections: List[TemplateCollection]
+    total: int
+
+
+class GetSharedCollectionsError(BaseModel):
+    statusCode: int
+    statusMessage: str
+    message: str
