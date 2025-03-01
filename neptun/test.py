@@ -5,7 +5,7 @@ from rich.markdown import Markdown
 import mdformat
 
 
-API_URL = "https://neptun-webui.vercel.app/api/ai/huggingface/google/gemma-2-27b-it/chat?chat_id=104"
+API_URL = "https://neptun-webui.vercel.app/api/ai/huggingface/google/gemma-2-27b-it/chat?chat_id=104&is_playground=false"
 
 payload = {
     "messages": [

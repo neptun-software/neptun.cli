@@ -16,11 +16,10 @@ console = Console()
 
 
 @template_app.command(name="delete", help="Delete a template from a collection.")
-def delete_template_cli(
+def delete_template(
     limit: int = typer.Option(None, "--limit", "-l", help="Limit the number of collections displayed"),
     select_last: bool = typer.Option(False, "--select-last", "-s", help="Display the last collections instead of the first ones")
 ):
-    # Fetch available collections.
     with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), transient=True) as progress:
         progress.add_task("Collecting available collections...", total=None)
         collections_result = collection_service.get_user_template_collections()
@@ -34,7 +33,6 @@ def delete_template_cli(
         console.print("[bold yellow]No collections available![/bold yellow]")
         raise typer.Exit()
 
-    # Map collection names to collection objects.
     collection_dict = {collection.name: collection for collection in collections_result.collections}
     if select_last:
         collection_choices = [collection.name for collection in (collections_result.collections[-limit:] if limit else collections_result.collections[-1:])]

@@ -13,6 +13,6 @@
     "active_chat":{
         "chat_id": "",
         "chat_name": "",
-        "model": "OpenAssistant/oasst-sft-4-pythia-12b-epoch-3.5"
+        "model": ""
     }
 }
