@@ -75,7 +75,18 @@ class Conversation:
         chat_id = self.chat_service.config_manager.read_config("active_chat", "chat_id")
         model = self.chat_service.config_manager.read_config("active_chat", "model")
         model_publisher, model_name = self.chat_service.extract_parts(model)
-        url = f"{self.chat_service.config_manager.read_config('utils', 'neptun_api_server_host')}/ai/huggingface/{model_publisher}/{model_name}/chat?chat_id={chat_id}&is_playground=false"
+
+        base_url = self.chat_service.config_manager.read_config("utils", "neptun_api_server_host")
+
+        match model_publisher:
+            case "openrouter":
+                url = f"{base_url}/ai/openrouter/{model_name}/chat?chat_id={chat_id}&is_playground=false"
+            case "ollama":
+                url = f"{base_url}/ai/ollama/{model_name}/chat?chat_id={chat_id}&is_playground=false"
+            case "cloudflare":
+                url = f"{base_url}/ai/cloudflare/{model_name}/chat?chat_id={chat_id}&is_playground=false"
+            case _:
+                url = f"{base_url}/ai/huggingface/{model_publisher}/{model_name}/chat?chat_id={chat_id}&is_playground=false"
 
         full_response = ""
 

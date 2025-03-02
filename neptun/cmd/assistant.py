@@ -62,20 +62,23 @@ def create_new_chat_dialog():
 
     new_chat_model = questionary.select(message="Select a ai-base-model:",
                                         choices=[
-                                            "google/gemma-2-27b-it",
-                                            "qwen/Qwen2.5-72B-Instruct",
-                                            "qwen/Qwen2.5-Coder-32B-Instruct",
-                                            "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B",
-                                            "mistralai/Mistral-Nemo-Instruct-2407",
-                                            "microsoft/Phi-3-mini-4k-instruct",
-
+                                                'google/gemma-2-27b-it',
+                                                'qwen/Qwen2.5-72B-Instruct',
+                                                'qwen/Qwen2.5-Coder-32B-Instruct',
+                                                'deepseek-ai/DeepSeek-R1-Distill-Qwen-32B',
+                                                'mistralai/Mistral-Nemo-Instruct-2407',
+                                                'mistralai/Mistral-7B-Instruct-v0.3',
+                                                'microsoft/Phi-3-mini-4k-instruct',
+                                                'cloudflare/llama-3.3-70b-instruct-fp8-fast',
+                                                'openrouter/gemini-2.0-pro-exp-02-05',
+                                                'openrouter/deepseek-chat',
+                                                'openrouter/llama-3.3-70b-instruct',
+                                                'ollama/rwkv-6-world',
                                         ]).ask()
     if new_chat_model is None:
         raise typer.Exit()
 
     create_chat_http_request = CreateChatHttpRequest(name=new_chat_name, model=new_chat_model)
-
-    typer.echo(create_chat_http_request.dict())
 
     with Progress(
             SpinnerColumn(),
@@ -286,24 +289,30 @@ def create_chat():
 
 
 @assistant_app.command(name="select", help="Select a chat-dialog.")
-def select_chat_dialog():
+def select_chat_dialog(limit: int = None, select_last: bool = False):
     with Progress(
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),
             transient=True,
     ) as progress:
-        progress.add_task(description="Collecting available chats...",
-                          total=None)
+        collecting_data_task = progress.add_task(description="Collecting available chats...", total=None)
 
         result = chat_service.get_available_ai_chats()
 
         if isinstance(result, ChatsHttpResponse):
             chat_dict = {f"{chat.id}: {chat.name}:[{chat.model}]": chat for chat in result.chats}
-            chat_choices = [f"{chat.id}: {chat.name}:[{chat.model}]" for chat in result.chats[:5]]
 
+            if select_last:
+                chat_choices = [f"{chat.id}: {chat.name}:[{chat.model}]" for chat in
+                                (result.chats[-limit:] if limit else result.chats[-1:])]
+            else:
+                chat_choices = [f"{chat.id}: {chat.name}:[{chat.model}]" for chat in
+                                (result.chats[:limit] if limit else result.chats)]
+
+            progress.update(collecting_data_task, completed=True, visible=False)
             progress.stop()
 
-            if result.chats is not None and len(result.chats) > 0:
+            if chat_choices:
                 action = questionary.select(
                     message="Select an available chat:",
                     choices=chat_choices
@@ -321,12 +330,10 @@ def select_chat_dialog():
                 typer.secho(f"Successfully selected: {selected_chat_object.name}!",
                             fg=typer.colors.GREEN)
             else:
-                typer.secho(f"No chats available!",
-                            fg=typer.colors.BRIGHT_YELLOW)
+                typer.secho("No chats available!", fg=typer.colors.BRIGHT_YELLOW)
 
         elif isinstance(result, GeneralErrorResponse):
-            typer.secho(f"{result.statusMessage}",
-                        fg=typer.colors.RED)
+            typer.secho(f"{result.statusMessage}", fg=typer.colors.RED)
 
 
 @assistant_app.command(name="update", help="Update an existing chat.")
