@@ -9,24 +9,14 @@ from neptun.model.responses import ConfigResponse
 from neptun import SUCCESS, CONFIG_KEY_NOT_FOUND_ERROR, __app_name__, DIR_ERROR, FILE_ERROR
 import json
 
-logging.basicConfig(
-    filename='app.log',
-    filemode='a',
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    level=logging.DEBUG
-)
-
-
 CONFIG_DIR_PATH = Path(typer.get_app_dir(__app_name__))
-logging.info(f"Config dir: {CONFIG_DIR_PATH}")
 CONFIG_FILE_PATH = CONFIG_DIR_PATH / "config/config.ini"
-DEFAULT_CONFIG_FILE_PATH = CONFIG_DIR_PATH / "config/default.json"
 
-default_json_path = importlib.resources.path('neptun.config', 'default.json')
-print(default_json_path)
+with importlib.resources.path('neptun.config', 'default.json') as default_json_path:
+    DEFAULT_CONFIG_FILE_PATH = default_json_path
 
 try:
-    with importlib.resources.open_text('neptun.config', 'default.json') as f:
+    with open(DEFAULT_CONFIG_FILE_PATH) as f:
         DEFAULT_CONFIG = json.load(f)
 except FileNotFoundError:
     DEFAULT_CONFIG = None

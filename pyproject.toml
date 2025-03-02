@@ -1,8 +1,8 @@
 [tool.poetry]
 name = "neptun"
-version = "0.1.4"
-description = "A CLI-Interface build with python which is compatible with tethe Neptun-web-application and alloows a seemsless automatic generation of deployment scripts based on the provided folder structure."
-authors = ["stevan06v"]
+version = "0.1.5"
+description = "A Python-based CLI for interacting with Neptun AI via the Neptun API interface, \ndesigned to answer questions on DevOps, Docker, Docker Compose, and more."
+authors = ["stevan06v", "jonasfroeller"]
 license = "The Unlicense"
 readme = "README.md"
 
@@ -24,6 +24,9 @@ textual = "^0.76.0"
 datetime = "^5.5"
 mdformat = "^0.7.22"
 mistune = "^3.1.1"
+pyfiglet = "^1.0.2"
+toml = "^0.10.2"
+colorama = "^0.4.6"
 
 
 [build-system]
