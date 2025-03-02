@@ -1,3 +1,5 @@
+import importlib.resources
+
 import typer
 from rich.console import Console, Group
 from rich.table import Table
@@ -15,14 +17,16 @@ console = Console()
 
 
 def get_project_info():
-    pyproject = toml.load("pyproject.toml")
+
+    with importlib.resources.path('neptun.config', 'info.toml') as neptun_info:
+        pyproject = toml.load(neptun_info)
 
     project_info = {
-        "name": pyproject["tool"]["poetry"]["name"],
-        "version": pyproject["tool"]["poetry"]["version"],
-        "description": "Neptun is a Python-based CLI for interacting with Neptun AI via the Neptun API interface,\ndesigned to answer questions on DevOps, Docker, Docker Compose, and more.",
-        "authors": ", ".join(pyproject["tool"]["poetry"]["authors"]),
-        "license": pyproject["tool"]["poetry"]["license"]
+        "name": pyproject["neptun"]["info"]["name"],
+        "version": pyproject["neptun"]["info"]["version"],
+        "description": pyproject["neptun"]["info"]["description"],
+        "authors": ", ".join(pyproject["neptun"]["info"]["authors"]),
+        "license": pyproject["neptun"]["info"]["license"]
     }
 
     return project_info

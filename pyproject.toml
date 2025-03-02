@@ -9,7 +9,8 @@ readme = "README.md"
 
 include = [
     "neptun/config/default.json",
-    "neptun/config/config.ini"
+    "neptun/config/config.ini",
+    "neptun/config/info.toml"
 ]
 
 [tool.poetry.dependencies]
