@@ -513,8 +513,7 @@ class TemplateService:
         url = f"{self.config_manager.read_config('utils', 'neptun_api_server_host')}/users/{user_id}/collections/{collection_id}/templates"
 
         try:
-            response = self.client.post(url, json=create_template_request.model_dump())
-
+            response = self.client.post(url, json=create_template_request.dict())
             if response.status_code == 400:
                 return ErrorResponse(
                     statusCode=400,
@@ -542,6 +541,7 @@ class TemplateService:
                 )
 
             response_data = response.json()
+
 
             if response.status_code == 201:
                 try:
@@ -637,7 +637,6 @@ class CollectionService:
             url,
             json=create_collection_request.model_dump(),
         )
-
         if response.status_code == 200:
             response_data = response.json()
             collection = TemplateCollection(**response_data['collection'])

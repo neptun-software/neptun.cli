@@ -484,7 +484,6 @@ def auto_create_template_collection(directory: str = typer.Argument(".", help="D
         console.print(f"[bold red]Error: User is not authenticated. Please log in.[/bold red]")
         raise typer.Exit()
 
-
     with Progress(
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),

@@ -65,6 +65,7 @@ class Conversation:
             return None
 
     async def ask(self, message):
+        await self.fetch_latest_messages()
         self.messages.append(Message(role="user", content=message))
 
         chat_request = ChatRequest(messages=self.messages)
@@ -82,7 +83,7 @@ class Conversation:
             with client.stream("POST", url, json=chat_request.model_dump(), headers=headers,
                                timeout=60) as response:
                 if response.status_code == 200:
-                    with Live("🔄 Streaming response from API...\n", console=self.console, refresh_per_second=10,
+                    with Live("Streaming response from API...\n", console=self.console, refresh_per_second=10,
                               transient=True) as live:
                         buffer = ""
                         for chunk in response.iter_bytes():
