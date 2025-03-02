@@ -115,13 +115,13 @@ class Conversation:
                             full_response += cleaned_text
                             live.update(full_response)
 
-                    # When the Live block exits, the streaming text is automatically cleared.
+                    # When the Live block exits, the streaming text is automatically cleared
                     md = Markdown(full_response.encode('utf-8').decode('unicode_escape'))
                     self.console.print(md)
                 else:
                     error_preview = next(response.iter_bytes(chunk_size=512)).decode("utf-8", errors="ignore")
                     self.console.print(
-                        f"❌ Failed to fetch stream. Status: {response.status_code}, Response: {error_preview}")
+                        f"Failed to fetch stream. Status: {response.status_code}, Response: {error_preview}")
 
     def clear(self) -> None:
         self.messages = []

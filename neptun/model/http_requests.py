@@ -8,6 +8,7 @@ from datetime import datetime
 class SignUpHttpRequest(BaseModel):
     email: str = Field(serialization_alias="email")
     password: str
+    confirmPassword: str
 
 
 class LoginHttpRequest(BaseModel):
@@ -93,3 +94,11 @@ class UpdateCollectionRequest(BaseModel):
 class UpdateChatRequest(BaseModel):
     name: str
     model: str
+
+
+class CreateNeptunProjectRequest(BaseModel):
+    name: str
+    description: Optional[str] = None
+    project_type: str
+    programming_language: str
+

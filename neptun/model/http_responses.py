@@ -213,3 +213,18 @@ class GetSharedCollectionsError(BaseModel):
     statusCode: int
     statusMessage: str
     message: str
+
+
+class NeptunProject(BaseModel):
+    id: int
+    name: str
+    description: Optional[str]
+    project_type: str
+    programming_language: str
+    created_at: datetime
+    updated_at: datetime
+    neptun_user_id: int
+
+
+class CreateNeptunProjectResponse(BaseModel):
+    project: NeptunProject

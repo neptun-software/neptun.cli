@@ -6,13 +6,13 @@ from neptun.utils.exceptions import AuthenticationError
 from neptun.utils.managers import ConfigManager
 from neptun.model.http_requests import SignUpHttpRequest, LoginHttpRequest, CreateChatHttpRequest, ChatRequest, \
     OTPCreateRequest, ResetPasswordRequest, CreateCollectionRequest, CreateTemplateRequest, Template, \
-    UpdateCollectionRequest, UpdateChatRequest
+    UpdateCollectionRequest, UpdateChatRequest, CreateNeptunProjectRequest
 from neptun.model.http_responses import SignUpHttpResponse, GeneralErrorResponse, ErrorResponse, LoginHttpResponse, \
     ChatsHttpResponse, CreateChatHttpResponse, ChatMessagesHttpResponse, GithubAppInstallation, \
     GithubAppInstallationHttpResponse, GetInstallationsError, \
     GithubRepositoryHttpResponse, GetImportsError, GithubRepository, OTPResponse, ResetPasswordResponse, \
     AuthenticationErrorResponse, HealthCheckResponse, GetChatFilesResponse, TemplateCollectionResponse, \
-    TemplateCollection, GetSharedCollectionsResponse, UpdateChatResponse
+    TemplateCollection, GetSharedCollectionsResponse, UpdateChatResponse, NeptunProject, CreateNeptunProjectResponse
 from neptun.utils.helpers import ChatResponseConverter
 import logging
 
@@ -771,6 +771,72 @@ class CollectionService:
             return GeneralErrorResponse(
                 statusCode=500,
                 statusMessage=f"Server error: {str(e)}"
+            )
+
+
+@singleton
+class ProjectService:
+    def __init__(self):
+        self.config_manager = ConfigManager()
+        self.client = httpx.Client(
+            cookies={
+                "neptun-session": self.config_manager.read_config(
+                    section="auth", key="neptun_session_cookie"
+                )
+            }
+        )
+        self.auth_service = AuthenticationService()
+
+    def close(self):
+        self.client.close()
+
+    def _ensure_authenticated(self) -> Union[bool, GeneralErrorResponse]:
+        try:
+            cookie = self.auth_service._get_session_cookie()
+            is_authenticated = self.auth_service.check_authenticated(cookie)
+            if not is_authenticated:
+                return GeneralErrorResponse(
+                    statusCode=401,
+                    statusMessage="Session cookie is invalid. Please log in again.",
+                )
+            return True
+        except Exception as e:
+            return GeneralErrorResponse(statusCode=401, statusMessage=str(e))
+
+    def create_project(
+        self, create_project_request: CreateNeptunProjectRequest
+    ) -> Union[CreateNeptunProjectResponse, GeneralErrorResponse]:
+        authenticated = self._ensure_authenticated()
+        if isinstance(authenticated, GeneralErrorResponse):
+            return authenticated
+
+        user_id = int(self.config_manager.read_config("auth.user", "id"))
+
+        url = (
+            f"{self.config_manager.read_config('utils', 'neptun_api_server_host')}/"
+            f"users/{user_id}/projects"
+        )
+
+        try:
+            response = self.client.post(
+                url,
+                json=create_project_request.model_dump(),
+                headers={"Accept": "application/json"},
+            )
+            print(response.json())
+            response.raise_for_status()
+
+            if response.status_code == 201:
+                response_data = response.json()
+                project = NeptunProject(**response_data)
+                return CreateNeptunProjectResponse(project=project)
+            else:
+                return GeneralErrorResponse(
+                    statusCode=response.status_code, statusMessage=response.text
+                )
+        except httpx.RequestError as e:
+            return GeneralErrorResponse(
+                statusCode=500, statusMessage=f"Server error: {str(e)}"
             )
 
 

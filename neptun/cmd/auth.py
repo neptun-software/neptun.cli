@@ -117,9 +117,11 @@ def register():
                           total=None)
 
         signup_http_request = SignUpHttpRequest(email=email,
-                                                password=password)
+                                                password=password,
+                                                confirmPassword=retype_password)
 
         result = authentication_service.sign_up(sign_up_http_request=signup_http_request)
+
 
         progress.stop()
         if isinstance(result, SignUpHttpResponse):
