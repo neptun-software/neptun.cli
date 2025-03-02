@@ -61,12 +61,17 @@ def create_template_collection():
     ).ask()
     description = questionary.text("Description for the collection (optional):").ask()
 
-    create_collection_request = CreateCollectionRequest(
-        name=name,
-        description=description if description else '',
-        is_shared=True if is_shared == "Yes" else False,
-        neptun_user_id=int(config_manager.read_config('auth.user', 'id'))
-    )
+    try:
+        create_collection_request = CreateCollectionRequest(
+            name=name,
+            description=description if description else '',
+            is_shared=True if is_shared == "Yes" else False,
+            neptun_user_id=int(config_manager.read_config('auth.user', 'id'))
+        )
+    except Exception as e:
+        console.print(f"[bold red]Error: User is not authenticated. Please log in.[/bold red]")
+        raise typer.Exit()
+
     with Progress(
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),
@@ -468,12 +473,18 @@ def auto_create_template_collection(directory: str = typer.Argument(".", help="D
 
     description = questionary.text("Description for the collection (optional):").ask()
 
-    create_collection_request = CreateCollectionRequest(
-        name=name,
-        description=description if description else '',
-        is_shared=True if is_shared == "Yes" else False,
-        neptun_user_id=int(config_manager.read_config('auth.user', 'id'))
-    )
+    try:
+        create_collection_request = CreateCollectionRequest(
+            name=name,
+            description=description if description else '',
+            is_shared=True if is_shared == "Yes" else False,
+            neptun_user_id=int(config_manager.read_config('auth.user', 'id'))
+        )
+    except Exception as e:
+        console.print(f"[bold red]Error: User is not authenticated. Please log in.[/bold red]")
+        raise typer.Exit()
+
+
     with Progress(
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),

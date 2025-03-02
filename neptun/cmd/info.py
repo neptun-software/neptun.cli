@@ -20,7 +20,7 @@ def get_project_info():
     project_info = {
         "name": pyproject["tool"]["poetry"]["name"],
         "version": pyproject["tool"]["poetry"]["version"],
-        "description": pyproject["tool"]["poetry"]["description"],
+        "description": "Neptun is a Python-based CLI for interacting with Neptun AI via the Neptun API interface,\ndesigned to answer questions on DevOps, Docker, Docker Compose, and more.",
         "authors": ", ".join(pyproject["tool"]["poetry"]["authors"]),
         "license": pyproject["tool"]["poetry"]["license"]
     }
@@ -48,7 +48,7 @@ def main(ctx: typer.Context):
             expand=False,
             title_align="center",
         )
-        print(styled_figlet,end="")
+        print(styled_figlet, end="")
         console.print(panel)
 
 
