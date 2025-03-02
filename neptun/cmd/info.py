@@ -48,7 +48,7 @@ def main(ctx: typer.Context):
             expand=False,
             title_align="center",
         )
-        print(styled_figlet)
+        print(styled_figlet,end="")
         console.print(panel)
 
 
