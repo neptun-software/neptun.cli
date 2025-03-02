@@ -823,10 +823,9 @@ class ProjectService:
                 json=create_project_request.model_dump(),
                 headers={"Accept": "application/json"},
             )
-            print(response.json())
             response.raise_for_status()
 
-            if response.status_code == 201:
+            if response.status_code == 200:
                 response_data = response.json()
                 project = NeptunProject(**response_data)
                 return CreateNeptunProjectResponse(project=project)

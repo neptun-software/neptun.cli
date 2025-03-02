@@ -53,21 +53,16 @@ def create_project():
         ]
     ).ask()
 
-    print(f"Project Type: {project_type}")
-    print(f"Programming Language: {programming_language}")
-
     project_type_mapped = project_type_map.get(project_type)
     programming_language_mapped = programming_language_map.get(programming_language)
-
-    print(f"Mapped Project Type: {project_type_mapped}")
-    print(f"Mapped Programming Language: {programming_language_mapped}")
 
     try:
         create_project_request = CreateNeptunProjectRequest(
             name=name,
             description=description if description else '',
-            project_type=project_type_mapped,
-            programming_language=programming_language_mapped,
+            type=project_type_mapped,
+            main_language=programming_language_mapped,
+            neptun_user_id=int(config_manager.read_config("auth.user", "id"))
         )
     except Exception:
         console.print("[bold red]Error: User is not authenticated. Please log in.[/bold red]")
@@ -95,10 +90,8 @@ def create_project():
 
             table.add_row("Name", project.name)
             table.add_row("Description", project.description if project.description else '/')
-            table.add_row("Project Type", project.project_type)
-            table.add_row("Programming Language", project.programming_language)
-            table.add_row("Created At", str(project.created_at))
-            table.add_row("Updated At", str(project.updated_at))
+            table.add_row("Project Type", project.type)
+            table.add_row("Programming Language", project.main_language)
 
             console.print(table)
 

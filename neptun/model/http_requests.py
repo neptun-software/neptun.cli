@@ -99,6 +99,7 @@ class UpdateChatRequest(BaseModel):
 class CreateNeptunProjectRequest(BaseModel):
     name: str
     description: Optional[str] = None
-    project_type: str
-    programming_language: str
+    type: str
+    main_language: str
+    neptun_user_id: int
 

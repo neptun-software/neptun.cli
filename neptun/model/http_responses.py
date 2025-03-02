@@ -219,8 +219,8 @@ class NeptunProject(BaseModel):
     id: int
     name: str
     description: Optional[str]
-    project_type: str
-    programming_language: str
+    type: str
+    main_language: str
     created_at: datetime
     updated_at: datetime
     neptun_user_id: int
