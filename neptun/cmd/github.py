@@ -1,6 +1,4 @@
-import typer
 import webbrowser
-from rich.console import Console
 from neptun.utils.managers import ConfigManager
 from neptun.utils.services import AuthenticationService, GithubService
 from neptun.model.http_responses import GetInstallationsError, GithubAppInstallationHttpResponse, GithubRepositoryHttpResponse, GeneralErrorResponse
@@ -112,7 +110,7 @@ def list_github_imports():
 
 @github_app.command(name="uninstall",
                     help="Uninstall the official neptun-github-application onto a repository.")
-def install_github_app():
+def uninstall_github_app():
     github_app_url = config_manager.read_config('utils', 'neptun_github_app_url')
     try:
         chrome = webbrowser.get('chrome')

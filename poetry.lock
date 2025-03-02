@@ -333,17 +333,6 @@ files = [
 ]
 
 [[package]]
-name = "mistune"
-version = "3.1.1"
-description = "A sane and fast Markdown parser with useful plugins and renderers"
-optional = false
-python-versions = ">=3.8"
-files = [
-    {file = "mistune-3.1.1-py3-none-any.whl", hash = "sha256:02106ac2aa4f66e769debbfa028509a275069dcffce0dfa578edd7b991ee700a"},
-    {file = "mistune-3.1.1.tar.gz", hash = "sha256:e0740d635f515119f7d1feb6f9b192ee60f0cc649f80a8f944f905706a21654c"},
-]
-
-[[package]]
 name = "msgpack"
 version = "1.1.0"
 description = "MessagePack serializer"
@@ -858,4 +847,4 @@ testing = ["coverage[toml]", "zope.event", "zope.testing"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12"
-content-hash = "77fd0cecbec9677b3dbb33a4cbd535698f35fd553b13a64e14c20217caaf1887"
+content-hash = "624a60a1b32130ee52cee948c0d10d46bcf53f952984c39bd3816d3f9d366add"

@@ -1,17 +1,10 @@
 import asyncio
-import textwrap
-import time
-from functools import wraps
-import re
-import httpx
 import questionary
 import typer
 from pydantic_core._pydantic_core import ValidationError
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
-
 from neptun.bot.chat import Conversation
-from neptun.utils.helpers import ChatResponseConverter
 from neptun.utils.managers import ConfigManager
 from neptun.utils.services import ChatService
 from neptun.model.http_responses import ChatsHttpResponse, GeneralErrorResponse, ErrorResponse, CreateChatHttpResponse
@@ -19,7 +12,6 @@ from neptun.model.http_requests import CreateChatHttpRequest
 from neptun.bot.tui import NeptunChatApp
 from rich.markdown import Markdown
 from rich.table import Table
-from io import StringIO
 
 assistant_app = typer.Typer(name="Neptun Chatbot", help="Start chatting with the neptun-chatbot.")
 
@@ -70,6 +62,7 @@ def create_new_chat_dialog():
 
     new_chat_model = questionary.select(message="Select a ai-base-model:",
                                         choices=[
+                                            "google/gemma-2-27b-it",
                                             "qwen/Qwen2.5-72B-Instruct",
                                             "qwen/Qwen2.5-Coder-32B-Instruct",
                                             "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B",
@@ -116,7 +109,7 @@ def create_new_chat_dialog():
 
                 console.print(table)
             else:
-                typer.secho(f"Issue: {result.statusCode} - {result.statusMessage}: Email address already exists!",
+                typer.secho(f"Issue: {result.statusCode} - {result.statusMessage}",
                             fg=typer.colors.RED)
         elif isinstance(result, GeneralErrorResponse):
             typer.secho(f"{result.statusMessage}",

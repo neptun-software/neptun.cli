@@ -1,4 +1,3 @@
-import asyncio
 from functools import wraps
 from typing import Union
 import httpx
@@ -14,7 +13,6 @@ from neptun.model.http_responses import SignUpHttpResponse, GeneralErrorResponse
     GithubRepositoryHttpResponse, GetImportsError, GithubRepository, OTPResponse, ResetPasswordResponse, \
     AuthenticationErrorResponse, HealthCheckResponse, GetChatFilesResponse, TemplateCollectionResponse, \
     TemplateCollection, GetSharedCollectionsResponse, UpdateChatResponse
-from neptun.utils.exceptions import NotAuthenticatedError
 from neptun.utils.helpers import ChatResponseConverter
 import logging
 
@@ -287,11 +285,11 @@ class ChatService:
         url = f"{self.config_manager.read_config('utils', 'neptun_api_server_host')}/users/{id}/chats"
 
         try:
-            response = self.client.post(url, data=create_chat_http_request.dict())
+            response = self.client.post(url, data=create_chat_http_request.model_dump())
 
             response_data = response.json()
 
-            logging.log(msg=f"CHAT\n{response_data}", level=logging.INFO)
+            print(response_data)
 
             if 'chat' not in response_data or response_data['chat'] is None:
                 return ErrorResponse(

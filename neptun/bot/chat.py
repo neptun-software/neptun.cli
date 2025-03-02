@@ -1,14 +1,9 @@
 import asyncio
-import re
-import time
-import mistune
-import typer
 from neptun.model.http_requests import ChatRequest, Message
 from rich.console import Console
 from neptun.utils.services import ChatService
-from neptun.model.http_responses import ChatMessage, ChatMessagesHttpResponse, ErrorResponse
+from neptun.model.http_responses import ChatMessage, ChatMessagesHttpResponse
 from neptun.utils.helpers import ChatResponseConverter
-import httpx
 import logging
 from rich.markdown import Markdown
 from rich.live import Live
@@ -79,8 +74,8 @@ class Conversation:
         chat_id = self.chat_service.config_manager.read_config("active_chat", "chat_id")
         model = self.chat_service.config_manager.read_config("active_chat", "model")
         model_publisher, model_name = self.chat_service.extract_parts(model)
-
         url = f"{self.chat_service.config_manager.read_config('utils', 'neptun_api_server_host')}/ai/huggingface/{model_publisher}/{model_name}/chat?chat_id={chat_id}&is_playground=false"
+
         full_response = ""
 
         with self.chat_service.client as client:

@@ -1,14 +1,11 @@
 import importlib.resources
-
 import typer
 from rich.console import Console, Group
-from rich.table import Table
 import toml
 from rich.text import Text
 from rich.panel import Panel
 import pyfiglet
 from colorama import Fore
-from colorama import Back
 from colorama import Style
 
 info_app = typer.Typer(name="neptun_status", help="Display the current status and version of the Neptun app.")
@@ -54,9 +51,6 @@ def main(ctx: typer.Context):
         )
         print(styled_figlet, end="")
         console.print(panel)
-
-
-
 
 
 if __name__ == "__main__":
