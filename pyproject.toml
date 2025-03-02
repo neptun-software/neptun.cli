@@ -1,10 +1,10 @@
 [tool.poetry]
 name = "neptun"
-version = "0.1.9"
+version = "0.1.11"
 description = "Neptun is a Python-based CLI for interacting with Neptun AI via the Neptun API interface, designed to answer questions on DevOps, Docker, Docker Compose, and more."
 
 authors = ["stevan06v", "jonasfroeller"]
-license = "The Unlicense"
+license = "MIT License"
 readme = "README.md"
 
 include = [
